@@ -28,7 +28,7 @@ const LoginPage = () => {
           layout="fill"
           objectFit="cover"
           quality={100}
-          className="z-0"
+          className="z-0 opacity-60" 
         />
         <div className="absolute inset-0 bg-black bg-opacity-50 z-10" />
       </div>
@@ -80,6 +80,14 @@ const LoginPage = () => {
           </SignIn.Step>
         </SignIn.Root>
       </div>
+      {/* Footer Credit */}
+<div className="absolute bottom-4 w-full flex justify-center z-20">
+  <div className="flex items-center gap-2 text-white text-sm font-medium">
+    <span>Powered by</span>
+    <Image src="/svg.png" alt="Cyberduce Logo" width={16} height={16} />
+    <span>Cyberduce Technologies</span>
+  </div>
+</div>
     </div>
   );
 };
