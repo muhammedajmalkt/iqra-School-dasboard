@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  postgress:
+  postgres:
     image: postgres:15
     container_name: postgres_db
     environment:
@@ -12,14 +12,14 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    
+
   app:
     build: .
     container_name: nextjs_app
     ports:
       - '3000:3000'
     environment:
-      - DATABASE_URL: postgresql://iqraschool:IQra@9949@localhost:5432/iqraschool
+      DATABASE_URL: postgresql://iqraschool:IQra@9949@postgres:5432/iqraschool
     depends_on:
       - postgres
 

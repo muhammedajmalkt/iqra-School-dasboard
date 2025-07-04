@@ -1,5 +1,5 @@
 {
-  "name": "lama-dev-next-dashboard",
+  "name": "Iqra-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/elements": "^0.23.36",
     "@clerk/nextjs": "^6.23.2",
     "@hookform/resolvers": "^3.9.0",
