@@ -1,4 +1,4 @@
-# Lama Dev School Management Dashboard
+# IQRA School Management Dashboard
 
 ## Getting Started
 
