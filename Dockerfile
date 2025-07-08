@@ -16,6 +16,9 @@ COPY . .
 # Generate Prisma Client (important before build)
 RUN npx prisma generate
 
+# Set environment variables for Next.js
+ENV NODE_options="--max-old-space-size=512"
+
 # Build the Next.js application
 RUN npm run build
 

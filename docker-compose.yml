@@ -18,6 +18,7 @@ services:
     container_name: nextjs_app
     ports:
       - '3000:3000'
+    restart: always
     environment:
       DATABASE_URL: postgresql://iqraschool:IQra@9949@postgres:5432/iqraschool
     depends_on:
