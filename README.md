@@ -25,14 +25,13 @@ echo '# Clerk Dashboard Setup
 
 Go to **Clerk Dashboard → Sessions → Claims**, and set:
 
-\`\`\`json
+`
 {
   "publicMetadata": {
     "role": "{{user.public_metadata.role}}"
   }
 }
-\`\`\`
-
+`
 This sets the user role (e.g. admin, teacher, etc.) that you can access in your Next.js app via:
 
 \`\`\`ts
