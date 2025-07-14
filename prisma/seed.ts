@@ -6,13 +6,13 @@ async function main() {
   await prisma.admin.create({
     data: {
       id: "admin1",
-      username: "admin1",
+      username: "admin",
     },
   });
   await prisma.admin.create({
     data: {
       id: "admin2",
-      username: "admin2",
+      username: "anfaskaloor",
     },
   });
 
@@ -47,7 +47,7 @@ async function main() {
     { name: "Chemistry" },
     { name: "Biology" },
     { name: "Computer Science" },
-    { name: "Art" },
+    { name: "Arts" },
   ];
 
   for (const subject of subjectData) {

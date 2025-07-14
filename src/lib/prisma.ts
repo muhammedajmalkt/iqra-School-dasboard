@@ -1,15 +1,14 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
 
-const prismaClientSingleton = () => {
-  return new PrismaClient()
+// Ensure global typing is extended
+declare global {
+  // Only one PrismaClient per process
+  var prisma: PrismaClient | undefined;
 }
 
-declare const globalThis: {
-  prismaGlobal: ReturnType<typeof prismaClientSingleton>;
-} & typeof global;
+const prisma = globalThis.prisma ?? new PrismaClient();
 
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+// In development, attach to global object to avoid creating new instances on HMR
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
 
-export default prisma
-
-if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma
+export default prisma;

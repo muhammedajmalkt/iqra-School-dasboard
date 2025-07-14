@@ -9,7 +9,9 @@ import {
   TeacherSchema,
 } from "./formValidationSchemas";
 import prisma from "./prisma";
-import { clerkClient } from "@clerk/clerk-sdk-node";
+import { clerkClient } from "@clerk/nextjs/server";
+
+
 
 type CurrentState = { success: boolean; error: boolean };
 
