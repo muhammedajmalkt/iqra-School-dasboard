@@ -20,7 +20,8 @@ services:
       - '3000:3000'
     restart: always
     environment:
-      DATABASE_URL: postgresql://iqraschool:IQra@9949@postgres:5432/iqraschool
+      DATABASE_URL: postgresql://iqraschool:IQra@9949@postgres_db:5432/iqraschool?schema=public
+    command: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
       - postgres
 
