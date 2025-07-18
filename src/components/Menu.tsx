@@ -129,9 +129,11 @@ const Menu = async () => {
           </span>
           {i.items.map((item) => {
             if (item.visible.includes(role)) {
+              const href = item.label === "Home" ? `/${role}` : item.href;
+
               return (
                 <Link
-                  href={item.href}
+                  href={href}
                   key={item.label}
                   className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
                 >
