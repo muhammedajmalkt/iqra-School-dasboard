@@ -18,6 +18,16 @@ const LoginPage = () => {
     }
   }, [user, router]);
 
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-white">
+        <div className="relative z-20 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-black">
       {/* Background Image */}
@@ -28,7 +38,7 @@ const LoginPage = () => {
           layout="fill"
           objectFit="cover"
           quality={100}
-          className="z-0 opacity-60" 
+          className="z-0 opacity-60"
         />
         <div className="absolute inset-0 bg-black bg-opacity-50 z-10" />
       </div>
@@ -81,13 +91,13 @@ const LoginPage = () => {
         </SignIn.Root>
       </div>
       {/* Footer Credit */}
-<div className="absolute bottom-4 w-full flex justify-center z-20">
-  <div className="flex items-center gap-2 text-white text-sm font-medium">
-    <span>Powered by</span>
-    <Image src="/svg.png" alt="Cyberduce Logo" width={16} height={16} />
-    <span>Cyberduce Technologies</span>
-  </div>
-</div>
+      <div className="absolute bottom-4 w-full flex justify-center z-20">
+        <div className="flex items-center gap-2 text-white text-sm font-medium">
+          <span>Powered by</span>
+          <Image src="/svg.png" alt="Cyberduce Logo" width={16} height={16} />
+          <span>Cyberduce Technologies</span>
+        </div>
+      </div>
     </div>
   );
 };
