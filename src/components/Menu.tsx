@@ -140,6 +140,7 @@ const Menu = async () => {
                   <Image src={item.icon} alt="" width={20} height={20} />
                   <span className="hidden lg:block">{item.label}</span>
                 </Link>
+                
               );
             }
           })}

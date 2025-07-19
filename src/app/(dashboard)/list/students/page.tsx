@@ -1,3 +1,4 @@
+// IMPORTS
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
@@ -8,52 +9,24 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-
 import { auth } from "@clerk/nextjs/server";
 
+// TYPES
 type StudentList = Student & { class: Class };
 
-const StudentListPage = async ({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined };
-}) => {
+// COMPONENT
+const StudentListPage = async ({ searchParams, }: { searchParams: { [key: string]: string | undefined }; }) => {
+
   const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
   const columns = [
-    {
-      header: "Info",
-      accessor: "info",
-    },
-    {
-      header: "Student ID",
-      accessor: "studentId",
-      className: "hidden md:table-cell",
-    },
-    {
-      header: "Grade",
-      accessor: "grade",
-      className: "hidden md:table-cell",
-    },
-    {
-      header: "Phone",
-      accessor: "phone",
-      className: "hidden lg:table-cell",
-    },
-    {
-      header: "Address",
-      accessor: "address",
-      className: "hidden lg:table-cell",
-    },
-    ...(role === "admin"
-      ? [
-          {
-            header: "Actions",
-            accessor: "action",
-          },
-        ]
-      : []),
+    { header: "Info", accessor: "info" },
+    { header: "Student ID", accessor: "studentId", className: "hidden md:table-cell" },
+    { header: "Grade", accessor: "grade", className: "hidden md:table-cell" },
+    { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
+    { header: "Address", accessor: "address", className: "hidden lg:table-cell" },
+    ...(role === "admin" ? [{ header: "Actions", accessor: "action" }] : []),
   ];
 
   const renderRow = (item: StudentList) => (
@@ -86,9 +59,6 @@ const StudentListPage = async ({
             </button>
           </Link>
           {role === "admin" && (
-            // <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple">
-            //   <Image src="/delete.png" alt="" width={16} height={16} />
-            // </button>
             <FormContainer table="student" type="delete" id={item.id} />
           )}
         </div>
@@ -97,73 +67,194 @@ const StudentListPage = async ({
   );
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
-
-  // URL PARAMS CONDITION
 
   const query: Prisma.StudentWhereInput = {};
 
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "teacherId":
-            query.class = {
-              lessons: {
-                some: {
-                  teacherId: value,
-                },
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (value !== undefined) {
+      switch (key) {
+        case "teacherId":
+          query.class = {
+            lessons: {
+              some: {
+                teacherId: value,
               },
-            };
-            break;
-          case "search":
-            query.name = { contains: value, mode: "insensitive" };
-            break;
-          default:
-            break;
-        }
+            },
+          };
+          break;
+        case "search":
+          query.name = { contains: value, mode: "insensitive" };
+          break;
+        case "classId":
+          query.classId = Number(value);
+          break;
+        default:
+          break;
       }
     }
   }
 
+  // SORT LOGIC
+  const currentSort = queryParams.sort || "name_asc";
+  const orderBy: Prisma.StudentOrderByWithRelationInput = (() => {
+    switch (currentSort) {
+      case "name_asc":
+        return { name: "asc" };
+      case "name_desc":
+        return { name: "desc" };
+      case "email_asc":
+        return { email: "asc" };
+      case "email_desc":
+        return { email: "desc" };
+      case "created_asc":
+        return { createdAt: "asc" };
+      case "created_desc":
+        return { createdAt: "desc" };
+      default:
+        return { name: "asc" };
+    }
+  })();
+
   const [data, count] = await prisma.$transaction([
     prisma.student.findMany({
       where: query,
-      include: {
-        class: true,
-      },
+      orderBy,
+      include: { class: true },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
     prisma.student.count({ where: query }),
   ]);
 
+  const classes = await prisma.class.findMany();
+
+  const getQueryString = (params: Record<string, string | undefined>) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value) query.set(key, value);
+    }
+    return query.toString();
+  };
+
+  const sortOptions = [
+    { value: "name_asc", label: "Name A-Z" },
+    { value: "name_desc", label: "Name Z-A" },
+    { value: "email_asc", label: "Email A-Z" },
+    { value: "email_desc", label: "Email Z-A" },
+    { value: "created_asc", label: "Oldest First" },
+    { value: "created_desc", label: "Newest First" },
+  ];
+
+    
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">All Students</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
+          <TableSearch  />
           <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {role === "admin" && (
-              // <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              //   <Image src="/plus.png" alt="" width={14} height={14} />
-              // </button>
-              <FormContainer table="student" type="create" />
-            )}
+         {/* Sort Dropdown */}
+            <div className="relative group">
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
+                <Image src="/sort.png" alt="Sort" width={14} height={14} />
+              </button>
+              <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[160px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-full">
+                <div className="py-1">
+                  {sortOptions.map((option) => (
+                    <Link
+                      key={option.value}
+                      href={`/list/students?${getQueryString({
+                        ...queryParams,
+                        sort: option.value,
+                      })}`}
+                      className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                        currentSort === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
+                      }`}
+                    >
+                      {option.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Filter Dropdown */}
+            <div className="relative group">
+              <button
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                  queryParams.classId
+                    ? "bg-blue-500 text-white"
+                    : "bg-lamaYellow hover:bg-yellow-400"
+                }`}
+              >
+                <Image src="/filter.png" alt="Filter" width={14} height={14} />
+              </button>
+              <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="py-1">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Filter by Class
+                  </div>
+                  <Link
+                    href={`/list/students`}
+                    className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                      !queryParams.classId ? "bg-blue-50 text-blue-600" : ""
+                    }`}
+                  >
+                    All Classes
+                  </Link>
+                  {classes.map((classItem) => (
+                    <Link
+                      key={classItem.id}
+                      href={`/list/students?${getQueryString({
+                        ...queryParams,
+                        classId: classItem.id.toString(),
+                      })}`}
+                      className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                        queryParams.classId === classItem.id.toString()
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
+                      }`}
+                    >
+                      {classItem.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Add Button */}
+            {role === "admin" && <FormContainer table="student" type="create" />}
           </div>
         </div>
       </div>
+
+      {/* Active Filters */}
+      {queryParams.classId && (
+        <div className="flex items-center gap-2 mt-4 mb-4">
+          <span className="text-sm text-gray-500">Active filters:</span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+            Class: {classes.find((c) => c.id.toString() === queryParams.classId)?.name}
+            <Link
+              href={`/list/students?${getQueryString({ ...queryParams, classId: undefined })}`}
+            >
+              <button className="ml-1 text-purple-600 hover:text-purple-800">×</button>
+            </Link>
+          </span>
+          <Link
+            href="/list/students"
+            className="text-xs text-gray-500 hover:text-gray-700 underline"
+          >
+            Clear all
+          </Link>
+        </div>
+      )}
+
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
+
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
