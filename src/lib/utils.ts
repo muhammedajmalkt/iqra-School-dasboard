@@ -43,3 +43,22 @@ export const adjustScheduleToCurrentWeek = (
     };
   });
 };
+
+export const createErrorMessage = (err: any) => {
+  console.error("Caught error:", err);
+
+  let errorMessage = "Something went wrong!";
+
+  if (err?.clerkError && Array.isArray(err.errors)) {
+    errorMessage = err.errors[0]?.message || errorMessage;
+  } else if (err?.code === "P2002" && err?.meta) {
+    // Known Prisma unique constraint error
+    errorMessage = `A record with the same ${err.meta.target} already exists.`;
+  } else if (err?.code && typeof err.message === "string") {
+    // Other Prisma DB errors
+    errorMessage = `Database error [${err.code}]: ${err.message}`;
+  } else if (typeof err.message === "string") {
+    errorMessage = err.message;
+  }
+  return errorMessage;
+};
