@@ -6,6 +6,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import type {
   ParentSchema,
   StudentSchema,
+  SubjectSchema,
   TeacherSchema,
 } from "./formValidationSchemas";
 import { createErrorMessage } from "./utils";
@@ -523,6 +524,69 @@ export const updateStudent = async (
   } catch (err) {
     console.error("Student update failed:", err);
     const errorMessage = createErrorMessage(err); // Optional
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createSubject = async (
+  currentState: CurrentState,
+  data: SubjectSchema
+): Promise<CurrentState> => {
+  try {
+    console.log("data:", data);
+    await prisma.subject.create({
+      data: {
+        name: data.name,
+        teachers: {
+          connect: data.teachers?.map((teacherId: string) => ({
+            id: teacherId,
+          })),
+        },
+      },
+    });
+
+    revalidatePath("/list/subjects");
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create subject error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateSubject = async (
+  currentState: CurrentState,
+  data: SubjectSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Subject ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.subject.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        name: data.name,
+        teachers: {
+          set: [], // Clear existing connections
+          connect: data.teachers?.map((teacherId: string) => ({
+            id: teacherId,
+          })),
+        },
+      },
+    });
+
+    revalidatePath("/list/subjects");
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update subject error:", err);
+    const errorMessage = createErrorMessage(err);
     return { success: false, error: true, errorMessage };
   }
 };
