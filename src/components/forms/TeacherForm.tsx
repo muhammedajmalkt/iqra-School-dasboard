@@ -66,14 +66,14 @@ const TeacherForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  useEffect(() => {
-    if (state.error) {
-      if (state.errorMessage) {
-        // toast.error("Something went wrong!");
-        toast.error(state.errorMessage);
-      }
-    }
-  }, [state.errorMessage]);
+  // useEffect(() => {
+  //   if (state.error) {
+  //     if (state.errorMessage) {
+  //       // toast.error("Something went wrong!");
+  //       toast.error(state.errorMessage);
+  //     }
+  //   }
+  // }, [state.errorMessage]);
 
   // Set default values for update
   useEffect(() => {
@@ -282,8 +282,8 @@ const TeacherForm = ({
         </div>
       </div>
 
-      {state.error && (
-        <span className="text-red-500">Something went wrong!</span>
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
       )}
 
       <button

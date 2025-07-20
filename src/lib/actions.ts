@@ -399,7 +399,7 @@ export const createStudent = async (
   data: StudentSchema
 ): Promise<CurrentState> => {
   let user;
-
+  console.log("create student:", data);
   try {
     const clerk = await clerkClient();
 
@@ -444,6 +444,85 @@ export const createStudent = async (
     }
 
     const errorMessage = createErrorMessage(err);
+    console.log("errorMessage:", errorMessage);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true };
+  }
+
+  try {
+    const clerk = await clerkClient();
+
+    // Update Clerk user
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      ...(data.password !== "" && { password: data.password }),
+      firstName: data.name,
+      lastName: data.surname,
+    });
+
+    // Update email in Clerk if provided
+    if (data.email) {
+      try {
+        const user = await clerk.users.getUser(data.id);
+        const primaryEmail = user.emailAddresses.find(
+          (email) => email.id === user.primaryEmailAddressId
+        );
+
+        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
+          const newEmailAddress = await clerk.emailAddresses.createEmailAddress(
+            {
+              userId: data.id,
+              emailAddress: data.email,
+              verified: true,
+            }
+          );
+
+          await clerk.users.updateUser(data.id, {
+            primaryEmailAddressID: newEmailAddress.id,
+          });
+
+          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
+        }
+      } catch (emailError) {
+        console.log("Email update error:", emailError);
+      }
+    }
+
+    // Update in Prisma DB
+    await prisma.student.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        parentId: data.parentId,
+        classId: Number(data.classId),
+        gradeId: Number(data.gradeId),
+      },
+    });
+
+    revalidatePath("/list/students");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Student update failed:", err);
+    const errorMessage = createErrorMessage(err); // Optional
     return { success: false, error: true, errorMessage };
   }
 };

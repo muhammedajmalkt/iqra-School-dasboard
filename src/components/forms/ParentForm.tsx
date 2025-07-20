@@ -56,11 +56,11 @@ const ParentForm = ({
     }
   }, [state, type, setOpen, router]);
 
-  useEffect(() => {
-    if (state.error && state.errorMessage) {
-      toast.error(state.errorMessage);
-    }
-  }, [state.errorMessage]);
+//   useEffect(() => {
+//     if (state.error && state.errorMessage) {
+//       toast.error(state.errorMessage);
+//     }
+//   }, [state.errorMessage]);
 
   useEffect(() => {
     if (type === "update" && data) {
@@ -157,8 +157,8 @@ const ParentForm = ({
         )}
       </div>
 
-      {state.error && (
-        <span className="text-red-500">Something went wrong!</span>
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
       )}
 
       <button className="bg-blue-400 text-white p-2 rounded-md" type="submit">

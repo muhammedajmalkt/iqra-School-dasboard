@@ -5,22 +5,13 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import Image from "next/image";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import {
-  studentSchema,
-  StudentSchema,
-  teacherSchema,
-  TeacherSchema,
-} from "@/lib/formValidationSchemas";
+import { studentSchema, StudentSchema } from "@/lib/formValidationSchemas";
 import { useFormState } from "react-dom";
-import {
-  createStudent,
-  createTeacher,
-  updateStudent,
-  updateTeacher,
-} from "@/lib/actions";
+import { createStudent, updateStudent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { CldUploadWidget } from "next-cloudinary";
+import SearchableSelect from "../SearchableSelect";
 
 const StudentForm = ({
   type,
@@ -52,8 +43,6 @@ const StudentForm = ({
   );
 
   const onSubmit = handleSubmit((data) => {
-    console.log("hello");
-    console.log(data);
     formAction({ ...data, img: img?.secure_url });
   });
 
@@ -113,16 +102,29 @@ const StudentForm = ({
       >
         {({ open }) => {
           return (
-            <div
-              className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-              onClick={() => open()}
-            >
-              <Image src="/upload.png" alt="" width={28} height={28} />
-              <span>Upload a photo</span>
+            <div className="flex  gap-2">
+              {/* Image preview */}
+
+              <Image
+                src={img?.secure_url || data?.img || "/noAvatar.png"}
+                alt=""
+                width={28}
+                height={28}
+                className="w-7 h-7 rounded-full object-cover"
+              />
+
+              <div
+                className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
+                onClick={() => open()}
+              >
+                <Image src="/upload.png" alt="" width={28} height={28} />
+                <span>Upload a photo</span>
+              </div>
             </div>
           );
         }}
       </CldUploadWidget>
+
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
           label="First Name"
@@ -167,13 +169,33 @@ const StudentForm = ({
           error={errors.birthday}
           type="date"
         />
-        <InputField
-          label="Parent Id"
+        <SearchableSelect
+          label="Parent"
           name="parentId"
-          defaultValue={data?.parentId}
           register={register}
+          options={relatedData.parents.map((parent: any) => ({
+            value: parent.id,
+            label: `${parent.name} ${parent.surname}`,
+          }))}
+          defaultValue={
+            data?.parentId
+              ? {
+                  value: data.parentId,
+                  label: `${data.parent?.name || ""} ${
+                    data.parent?.surname || ""
+                  }`,
+                }
+              : undefined
+          }
+          // onChange={(value) => {
+          //   const input = document.getElementsByName(
+          //     "parentId"
+          //   )[0] as HTMLInputElement;
+          //   input.value = value.toString();
+          // }}
           error={errors.parentId}
         />
+
         {data && (
           <InputField
             label="Id"
@@ -248,8 +270,8 @@ const StudentForm = ({
           )}
         </div>
       </div>
-      {state.error && (
-        <span className="text-red-500">Something went wrong!</span>
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
       )}
       <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
         {type === "create" ? "Create" : "Update"}
