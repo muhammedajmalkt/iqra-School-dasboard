@@ -42,7 +42,7 @@ const ClassForm = ({
       error: false,
     }
   );
-  console.log("state:", state);
+
   const [isPending, startTransition] = useTransition();
 
   const onSubmit = handleSubmit((formData) => {
