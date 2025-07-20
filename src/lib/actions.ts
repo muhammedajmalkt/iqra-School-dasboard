@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
-import type { TeacherSchema } from "./formValidationSchemas";
+import type {
+  ParentSchema,
+  StudentSchema,
+  TeacherSchema,
+} from "./formValidationSchemas";
 import { createErrorMessage } from "./utils";
 
 type CurrentState = { success: boolean; error: boolean; errorMessage?: string };
@@ -203,7 +207,7 @@ export const deleteStudent = async (
 export const deleteClass = async (
   currentState: CurrentState,
   data: FormData
-) : Promise<CurrentState>=> {
+): Promise<CurrentState> => {
   try {
     const id = Number(data.get("id"));
 
@@ -233,7 +237,7 @@ export const deleteExam = async (
 export const deleteSubject = async (
   currentState: CurrentState,
   data: FormData
-) : Promise<CurrentState>=> {
+): Promise<CurrentState> => {
   try {
     const id = Number(data.get("id"));
 
@@ -242,5 +246,204 @@ export const deleteSubject = async (
   } catch (error) {
     console.log(error);
     return { success: false, error: true };
+  }
+};
+
+export const createParent = async (
+  currentState: CurrentState,
+  data: ParentSchema
+): Promise<CurrentState> => {
+  let user;
+
+  try {
+    const clerk = await clerkClient();
+
+    user = await clerk.users.createUser({
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      emailAddress: data.email ? [data.email] : [],
+      publicMetadata: { role: "parent" },
+    });
+
+    await prisma.parent.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    revalidatePath("/list/parents");
+    return { success: true, error: false };
+  } catch (err: any) {
+    if (user) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(user.id);
+      } catch (cleanupError) {
+        console.error("Failed to rollback Clerk user:", cleanupError);
+      }
+    }
+
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateParent = async (
+  currentState: CurrentState,
+  data: ParentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true };
+  }
+
+  try {
+    const clerk = await clerkClient();
+
+    // Update Clerk user info
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      ...(data.password !== "" && { password: data.password }),
+      firstName: data.name,
+      lastName: data.surname,
+    });
+
+    // Email update logic (if provided)
+    if (data.email) {
+      try {
+        const user = await clerk.users.getUser(data.id);
+        const primaryEmail = user.emailAddresses.find(
+          (email) => email.id === user.primaryEmailAddressId
+        );
+
+        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
+          const newEmail = await clerk.emailAddresses.createEmailAddress({
+            userId: data.id,
+            emailAddress: data.email,
+            verified: true,
+          });
+
+          await clerk.users.updateUser(data.id, {
+            primaryEmailAddressID: newEmail.id,
+          });
+
+          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
+        }
+      } catch (emailError) {
+        console.log("Email update error:", emailError);
+      }
+    }
+
+    // Update parent in Prisma
+    await prisma.parent.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    revalidatePath("/list/parents");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Parent update error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteParent = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = data.get("id") as string;
+
+  try {
+    const clerk = await clerkClient();
+
+    // Delete from Clerk
+    await clerk.users.deleteUser(id);
+
+    // Delete from Prisma
+    await prisma.parent.delete({
+      where: {
+        id: id,
+      },
+    });
+
+    // Revalidate parent list page
+    revalidatePath("/list/parents");
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Parent deletion failed:", err);
+    const errorMessage = createErrorMessage(err); // Optional error handler
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  let user;
+
+  try {
+    const clerk = await clerkClient();
+
+    user = await clerk.users.createUser({
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      emailAddress: data.email ? [data.email] : [],
+      publicMetadata: { role: "student" },
+    });
+
+    await prisma.student.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        classId: data.classId,
+        gradeId: data.gradeId,
+        parentId: data.parentId,
+      },
+    });
+
+    revalidatePath("/list/students");
+    return { success: true, error: false };
+  } catch (err: any) {
+    if (user) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(user.id);
+      } catch (cleanupError) {
+        console.error("Failed to rollback Clerk user:", cleanupError);
+      }
+    }
+
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
   }
 };

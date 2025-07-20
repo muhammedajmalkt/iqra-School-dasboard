@@ -3,6 +3,7 @@
 import {
   deleteClass,
   deleteExam,
+  deleteParent,
   deleteStudent,
   deleteSubject,
   deleteTeacher,
@@ -29,7 +30,7 @@ const deleteActionMap = {
   teacher: deleteTeacher,
   student: deleteStudent,
   exam: deleteExam,
-  parent: deleteSubject,
+  parent: deleteParent,
   lesson: deleteSubject,
   assignment: deleteSubject,
   result: deleteSubject,
@@ -51,6 +52,9 @@ const ClassForm = dynamic(() => import("./forms/ClassForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const ExamForm = dynamic(() => import("./forms/ExamForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ParentForm = dynamic(() => import("./forms/ParentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -102,6 +106,14 @@ const forms: {
       relatedData={relatedData}
     />
   ),
+  parent: (setOpen, type, data, relatedData) => (
+    <ParentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
 const FormModal = ({
@@ -111,6 +123,7 @@ const FormModal = ({
   id,
   relatedData,
 }: FormContainerProps & { relatedData?: any }) => {
+  console.log("type:", type);
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
   const bgColor =
     type === "create"
@@ -165,6 +178,7 @@ const FormModal = ({
 
     if (type === "create" || type === "update") {
       const FormComponent = forms[table];
+
       return FormComponent ? (
         FormComponent(setOpen, type, data, relatedData)
       ) : (
