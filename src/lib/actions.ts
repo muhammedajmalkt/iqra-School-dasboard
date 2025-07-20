@@ -5,6 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import type {
   ClassSchema,
   ExamSchema,
+  LessonSchema,
   ParentSchema,
   StudentSchema,
   SubjectSchema,
@@ -691,6 +692,81 @@ export const deleteExam = async (
   } catch (error) {
     console.log(error);
     const errorMessage = createErrorMessage(error);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createLesson = async (
+  currentState: CurrentState,
+  data: LessonSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.lesson.create({
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        subjectId: data.subjectId,
+        classId: data.classId,
+        teacherId: data.teacherId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateLesson = async (
+  currentState: CurrentState,
+  data: LessonSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Lesson ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.lesson.update({
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        subjectId: data.subjectId,
+        classId: data.classId,
+        teacherId: data.teacherId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteLesson = async (
+  currentState: CurrentState,
+  formData: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(formData.get("id"));
+    await prisma.lesson.delete({ where: { id } });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Delete lesson error:", err);
+    const errorMessage = createErrorMessage(err);
     return { success: false, error: true, errorMessage };
   }
 };
