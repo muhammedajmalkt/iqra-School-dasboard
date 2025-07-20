@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import type {
+  ClassSchema,
+  ExamSchema,
   ParentSchema,
   StudentSchema,
   SubjectSchema,
@@ -54,7 +55,6 @@ export const createTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err: any) {
     // If Prisma failed but Clerk user was created, clean up
@@ -149,7 +149,6 @@ export const updateTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -173,7 +172,6 @@ export const deleteTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -197,40 +195,9 @@ export const deleteStudent = async (
       },
     });
 
-    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
-    return { success: false, error: true };
-  }
-};
-
-export const deleteClass = async (
-  currentState: CurrentState,
-  data: FormData
-): Promise<CurrentState> => {
-  try {
-    const id = Number(data.get("id"));
-
-    await prisma.class.delete({ where: { id } });
-    return { success: true, error: false };
-  } catch (error) {
-    console.log(error);
-    return { success: false, error: true };
-  }
-};
-
-export const deleteExam = async (
-  currentState: CurrentState,
-  data: FormData
-): Promise<CurrentState> => {
-  try {
-    const id = Number(data.get("id"));
-
-    await prisma.exam.delete({ where: { id } });
-    return { success: true, error: false };
-  } catch (error) {
-    console.log(error);
     return { success: false, error: true };
   }
 };
@@ -280,7 +247,6 @@ export const createParent = async (
       },
     });
 
-    revalidatePath("/list/parents");
     return { success: true, error: false };
   } catch (err: any) {
     if (user) {
@@ -357,7 +323,6 @@ export const updateParent = async (
       },
     });
 
-    revalidatePath("/list/parents");
     return { success: true, error: false };
   } catch (err) {
     console.error("Parent update error:", err);
@@ -385,7 +350,6 @@ export const deleteParent = async (
     });
 
     // Revalidate parent list page
-    revalidatePath("/list/parents");
 
     return { success: true, error: false };
   } catch (err) {
@@ -432,7 +396,6 @@ export const createStudent = async (
       },
     });
 
-    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err: any) {
     if (user) {
@@ -519,7 +482,6 @@ export const updateStudent = async (
       },
     });
 
-    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
     console.error("Student update failed:", err);
@@ -545,7 +507,6 @@ export const createSubject = async (
       },
     });
 
-    revalidatePath("/list/subjects");
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Create subject error:", err);
@@ -582,11 +543,155 @@ export const updateSubject = async (
       },
     });
 
-    revalidatePath("/list/subjects");
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Update subject error:", err);
     const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createClass = async (
+  currentState: CurrentState,
+  data: ClassSchema
+): Promise<CurrentState> => {
+  try {
+    console.log("data:", data);
+    await prisma.class.create({
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        supervisorId: data.supervisorId || null,
+        gradeId: data.gradeId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create class error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateClass = async (
+  currentState: CurrentState,
+  data: ClassSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Class ID is required for update",
+    };
+  }
+
+  try {
+    console.log("update data:", data);
+    await prisma.class.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        supervisorId: data.supervisorId || null,
+        gradeId: data.gradeId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update class error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteClass = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(data.get("id"));
+
+    await prisma.class.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (error) {
+    const errorMessage = createErrorMessage(error);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createExam = async (
+  currentState: CurrentState,
+  data: ExamSchema
+): Promise<CurrentState> => {
+  try {
+    console.log("data:", data);
+    await prisma.exam.create({
+      data: {
+        title: data.title,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create exam error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateExam = async (
+  currentState: CurrentState,
+  data: ExamSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Exam ID is required for update",
+    };
+  }
+
+  try {
+    console.log("update data:", data);
+    await prisma.exam.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        title: data.title,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update exam error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteExam = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(data.get("id"));
+
+    await prisma.exam.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (error) {
+    console.log(error);
+    const errorMessage = createErrorMessage(error);
     return { success: false, error: true, errorMessage };
   }
 };

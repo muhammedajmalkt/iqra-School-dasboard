@@ -3,19 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
-import {
-  classSchema,
-  ClassSchema,
-  subjectSchema,
-  SubjectSchema,
-} from "@/lib/formValidationSchemas";
-import {
-  createClass,
-  createSubject,
-  updateClass,
-  updateSubject,
-} from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { classSchema, ClassSchema } from "@/lib/formValidationSchemas";
+import { createClass, updateClass } from "@/lib/actions";
+import { useActionState, useTransition } from "react";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -37,28 +27,35 @@ const ClassForm = ({
     formState: { errors },
   } = useForm<ClassSchema>({
     resolver: zodResolver(classSchema),
+    defaultValues: {
+      name: data?.name || "",
+      capacity: data?.capacity || 0,
+      supervisorId: data?.supervisorId || "",
+      gradeId: data?.gradeId || 0,
+    },
   });
 
-  // AFTER REACT 19 IT'LL BE USEACTIONSTATE
-
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createClass : updateClass,
     {
       success: false,
       error: false,
     }
   );
+  console.log("state:", state);
+  const [isPending, startTransition] = useTransition();
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-    formAction(data);
+  const onSubmit = handleSubmit((formData) => {
+    startTransition(() => {
+      formAction(formData);
+    });
   });
 
   const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
-      toast(`Subject has been ${type === "create" ? "created" : "updated"}!`);
+      toast(`Class has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
     }
@@ -80,13 +77,16 @@ const ClassForm = ({
           register={register}
           error={errors?.name}
         />
+
         <InputField
           label="Capacity"
           name="capacity"
+          type="number"
           defaultValue={data?.capacity}
           register={register}
           error={errors?.capacity}
         />
+
         {data && (
           <InputField
             label="Id"
@@ -97,20 +97,18 @@ const ClassForm = ({
             hidden
           />
         )}
+
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Supervisor</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("supervisorId")}
-            defaultValue={data?.teachers}
+            defaultValue={data?.supervisorId || ""}
           >
+            <option value="">Select a supervisor (Optional)</option>
             {teachers.map(
               (teacher: { id: string; name: string; surname: string }) => (
-                <option
-                  value={teacher.id}
-                  key={teacher.id}
-                  selected={data && teacher.id === data.supervisorId}
-                >
+                <option value={teacher.id} key={teacher.id}>
                   {teacher.name + " " + teacher.surname}
                 </option>
               )
@@ -122,20 +120,18 @@ const ClassForm = ({
             </p>
           )}
         </div>
+
         <div className="flex flex-col gap-2 w-full md:w-1/4">
           <label className="text-xs text-gray-500">Grade</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("gradeId")}
-            defaultValue={data?.gradeId}
+            defaultValue={data?.gradeId || ""}
           >
+            <option value="">Select a grade</option>
             {grades.map((grade: { id: number; level: number }) => (
-              <option
-                value={grade.id}
-                key={grade.id}
-                selected={data && grade.id === data.gradeId}
-              >
-                {grade.level}
+              <option value={grade.id} key={grade.id}>
+                Grade {grade.level}
               </option>
             ))}
           </select>
@@ -146,11 +142,26 @@ const ClassForm = ({
           )}
         </div>
       </div>
-      {state.error && (
+
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
+      )}
+      {state.error && !state.errorMessage && (
         <span className="text-red-500">Something went wrong!</span>
       )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

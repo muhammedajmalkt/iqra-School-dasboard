@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFormState } from "react-dom";
+import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "react-toastify";
@@ -30,7 +30,7 @@ const ParentForm = ({
     resolver: zodResolver(parentSchema),
   });
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createParent : updateParent,
     {
       success: false,
@@ -39,13 +39,18 @@ const ParentForm = ({
     }
   );
 
+  const [isPending, startTransition] = useTransition();
+
   const router = useRouter();
 
   const onSubmit = handleSubmit((formData) => {
     const submitData = {
       ...formData,
     };
-    formAction(submitData);
+
+    startTransition(() => {
+      formAction(submitData);
+    });
   });
 
   useEffect(() => {
@@ -55,12 +60,6 @@ const ParentForm = ({
       router.refresh();
     }
   }, [state, type, setOpen, router]);
-
-//   useEffect(() => {
-//     if (state.error && state.errorMessage) {
-//       toast.error(state.errorMessage);
-//     }
-//   }, [state.errorMessage]);
 
   useEffect(() => {
     if (type === "update" && data) {
@@ -161,8 +160,18 @@ const ParentForm = ({
         <span className="text-red-500">{state.errorMessage}</span>
       )}
 
-      <button className="bg-blue-400 text-white p-2 rounded-md" type="submit">
-        {type === "create" ? "Create" : "Update"}
+      <button
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        type="submit"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { subjectSchema, SubjectSchema } from "@/lib/formValidationSchemas";
 import { createSubject, updateSubject } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useActionState, useTransition } from "react";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -33,16 +33,20 @@ const SubjectForm = ({
     },
   });
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createSubject : updateSubject,
     {
       success: false,
       error: false,
     }
   );
+  
+  const [isPending, startTransition] = useTransition();
 
   const onSubmit = handleSubmit((formData) => {
-    formAction(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   });
 
   const router = useRouter();
@@ -119,8 +123,18 @@ const SubjectForm = ({
         <span className="text-red-500">Something went wrong!</span>
       )}
 
-      <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

@@ -6,7 +6,7 @@ import InputField from "../InputField";
 import Image from "next/image";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { studentSchema, StudentSchema } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useActionState, useTransition } from "react";
 import { createStudent, updateStudent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -34,7 +34,7 @@ const StudentForm = ({
 
   const [img, setImg] = useState<any>();
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createStudent : updateStudent,
     {
       success: false,
@@ -42,8 +42,12 @@ const StudentForm = ({
     }
   );
 
+  const [isPending, startTransition] = useTransition();
+
   const onSubmit = handleSubmit((data) => {
-    formAction({ ...data, img: img?.secure_url });
+    startTransition(() => {
+      formAction({ ...data, img: img?.secure_url });
+    });
   });
 
   const router = useRouter();
@@ -187,12 +191,6 @@ const StudentForm = ({
                 }
               : undefined
           }
-          // onChange={(value) => {
-          //   const input = document.getElementsByName(
-          //     "parentId"
-          //   )[0] as HTMLInputElement;
-          //   input.value = value.toString();
-          // }}
           error={errors.parentId}
         />
 
@@ -273,8 +271,18 @@ const StudentForm = ({
       {state.error && state.errorMessage && (
         <span className="text-red-500">{state.errorMessage}</span>
       )}
-      <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );

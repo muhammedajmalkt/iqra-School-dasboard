@@ -3,19 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
-import {
-  examSchema,
-  ExamSchema,
-  subjectSchema,
-  SubjectSchema,
-} from "@/lib/formValidationSchemas";
-import {
-  createExam,
-  createSubject,
-  updateExam,
-  updateSubject,
-} from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { examSchema, ExamSchema } from "@/lib/formValidationSchemas";
+import { createExam, updateExam } from "@/lib/actions";
+import { useActionState, useTransition } from "react";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -37,21 +27,29 @@ const ExamForm = ({
     formState: { errors },
   } = useForm<ExamSchema>({
     resolver: zodResolver(examSchema),
+    defaultValues: {
+      title: data?.title || "",
+      startTime: data?.startTime || "",
+      endTime: data?.endTime || "",
+      lessonId: data?.lessonId || 0,
+    },
   });
 
-  // AFTER REACT 19 IT'LL BE USEACTIONSTATE
-
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createExam : updateExam,
     {
       success: false,
       error: false,
     }
   );
+  console.log("state:", state);
+  const [isPending, startTransition] = useTransition();
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-    formAction(data);
+  const onSubmit = handleSubmit((formData) => {
+    console.log(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   });
 
   const router = useRouter();
@@ -111,8 +109,9 @@ const ExamForm = ({
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("lessonId")}
-            defaultValue={data?.teachers}
+            defaultValue={data?.lessonId || ""}
           >
+            <option value="">Select a lesson</option>
             {lessons.map((lesson: { id: number; name: string }) => (
               <option value={lesson.id} key={lesson.id}>
                 {lesson.name}
@@ -126,11 +125,26 @@ const ExamForm = ({
           )}
         </div>
       </div>
-      {state.error && (
+
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
+      )}
+      {state.error && !state.errorMessage && (
         <span className="text-red-500">Something went wrong!</span>
       )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );
