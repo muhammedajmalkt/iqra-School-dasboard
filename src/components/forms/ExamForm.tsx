@@ -10,6 +10,19 @@ import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
+function formatDatetimeLocal(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const yyyy = d.getFullYear();
+  const mm = pad(d.getMonth() + 1);
+  const dd = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const min = pad(d.getMinutes());
+
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
 const ExamForm = ({
   type,
   data,
@@ -29,8 +42,8 @@ const ExamForm = ({
     resolver: zodResolver(examSchema),
     defaultValues: {
       title: data?.title || "",
-      startTime: data?.startTime || "",
-      endTime: data?.endTime || "",
+      startTime: data?.startTime ? formatDatetimeLocal(data.startTime) : "",
+      endTime: data?.endTime ? formatDatetimeLocal(data.endTime) : "",
       lessonId: data?.lessonId || 0,
     },
   });
@@ -42,11 +55,10 @@ const ExamForm = ({
       error: false,
     }
   );
-  console.log("state:", state);
+
   const [isPending, startTransition] = useTransition();
 
   const onSubmit = handleSubmit((formData) => {
-    console.log(formData);
     startTransition(() => {
       formAction(formData);
     });
@@ -78,6 +90,7 @@ const ExamForm = ({
           register={register}
           error={errors?.title}
         />
+
         <InputField
           label="Start Date"
           name="startTime"
@@ -94,6 +107,7 @@ const ExamForm = ({
           error={errors?.endTime}
           type="datetime-local"
         />
+
         {data && (
           <InputField
             label="Id"

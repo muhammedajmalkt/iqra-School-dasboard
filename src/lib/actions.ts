@@ -628,12 +628,11 @@ export const createExam = async (
   data: ExamSchema
 ): Promise<CurrentState> => {
   try {
-    console.log("data:", data);
     await prisma.exam.create({
       data: {
         title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
         lessonId: data.lessonId,
       },
     });
@@ -666,8 +665,8 @@ export const updateExam = async (
       },
       data: {
         title: data.title,
-        startTime: data.startTime,
-        endTime: data.endTime,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
         lessonId: data.lessonId,
       },
     });
