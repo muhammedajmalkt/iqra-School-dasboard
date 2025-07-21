@@ -191,3 +191,21 @@ export const assignmentSchema = z
   );
 
 export type AssignmentSchema = z.infer<typeof assignmentSchema>;
+
+export const resultSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    score: z.coerce
+      .number()
+      .min(0, "Score must be at least 0")
+      .max(100, "Score cannot exceed 100"),
+    examId: z.coerce.number().optional().nullable(),
+    assignmentId: z.coerce.number().optional().nullable(),
+    studentId: z.string().min(1, "Student is required"),
+  })
+  .refine((data) => data.examId || data.assignmentId, {
+    message: "Either exam or assignment must be selected",
+    path: ["examId"],
+  });
+
+export type ResultSchema = z.infer<typeof resultSchema>;

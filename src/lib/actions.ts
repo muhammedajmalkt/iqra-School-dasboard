@@ -9,6 +9,7 @@ import type {
   ExamSchema,
   LessonSchema,
   ParentSchema,
+  ResultSchema,
   StudentSchema,
   SubjectSchema,
   TeacherSchema,
@@ -921,6 +922,75 @@ export const deleteAssignment = async (
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Delete assignment error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createResult = async (
+  currentState: CurrentState,
+  data: ResultSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.result.create({
+      data: {
+        score: data.score,
+        examId: data.examId || null,
+        assignmentId: data.assignmentId || null,
+        studentId: data.studentId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create result error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateResult = async (
+  currentState: CurrentState,
+  data: ResultSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Result ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.result.update({
+      where: { id: data.id },
+      data: {
+        score: data.score,
+        examId: data.examId || null,
+        assignmentId: data.assignmentId || null,
+        studentId: data.studentId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update result error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteResult = async (
+  currentState: CurrentState,
+  formData: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(formData.get("id"));
+    await prisma.result.delete({ where: { id } });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Delete result error:", err);
     const errorMessage = createErrorMessage(err);
     return { success: false, error: true, errorMessage };
   }
