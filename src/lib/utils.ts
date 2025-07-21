@@ -2,6 +2,8 @@
 // FOR THIS REASON WE'LL GET THE LAST WEEK AS THE REFERENCE WEEK.
 // IN THE TUTORIAL WE'RE TAKING THE NEXT WEEK AS THE REFERENCE WEEK.
 
+import { Prisma } from "@prisma/client";
+
 const getLatestMonday = (): Date => {
   const today = new Date();
   const dayOfWeek = today.getDay();
@@ -44,21 +46,66 @@ export const adjustScheduleToCurrentWeek = (
   });
 };
 
-export const createErrorMessage = (err: any) => {
+type ClerkError = {
+  clerkError: boolean;
+  errors: { message: string }[];
+};
+
+type KnownPrismaError = Prisma.PrismaClientKnownRequestError & {
+  code: string;
+  meta?: any;
+};
+
+type UnknownError = {
+  message?: string;
+};
+
+export const createErrorMessage = (
+  err: ClerkError | KnownPrismaError | UnknownError | unknown
+): string => {
   console.error("Caught error:", err);
 
   let errorMessage = "Something went wrong!";
 
-  if (err?.clerkError && Array.isArray(err.errors)) {
-    errorMessage = err.errors[0]?.message || errorMessage;
-  } else if (err?.code === "P2002" && err?.meta) {
-    // Known Prisma unique constraint error
-    errorMessage = `A record with the same ${err.meta.target} already exists.`;
-  } else if (err?.code && typeof err.message === "string") {
-    // Other Prisma DB errors
-    errorMessage = `Database error [${err.code}]: ${err.message}`;
-  } else if (typeof err.message === "string") {
-    errorMessage = err.message;
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "clerkError" in err &&
+    Array.isArray((err as ClerkError).errors)
+  ) {
+    // Clerk error
+    errorMessage = (err as ClerkError).errors[0]?.message || errorMessage;
+  } else if (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof err.code === "string"
+  ) {
+    const prismaError = err as KnownPrismaError;
+
+    switch (prismaError.code) {
+      case "P2002":
+        errorMessage = `A record with the same ${prismaError.meta?.target} already exists.`;
+        break;
+      case "P2003":
+        const field = prismaError.meta?.field_name;
+        errorMessage = `Foreign key constraint failed on ${field}. Make sure related data exists.`;
+        break;
+      case "P2025":
+        errorMessage = `Record to update/delete does not exist.`;
+        break;
+      default:
+        errorMessage = `Database error [${prismaError.code}]: ${prismaError.message}`;
+        break;
+    }
+  } else if (
+    typeof err === "object" &&
+    err !== null &&
+    "message" in err &&
+    typeof (err as any).message === "string"
+  ) {
+    errorMessage = (err as { message: string }).message;
   }
+
   return errorMessage;
 };

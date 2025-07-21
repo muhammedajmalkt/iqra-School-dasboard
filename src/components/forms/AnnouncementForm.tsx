@@ -64,21 +64,6 @@ const AnnouncementForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  // Set default values for update
-  //   useEffect(() => {
-  //     if (type === "update" && data) {
-  //       setValue("title", data.title);
-  //       setValue("description", data.description);
-  //       setValue("classId", data.classId);
-  //       if (data.date) {
-  //         setValue("date", new Date(data.date));
-  //       }
-  //       if (data.id) {
-  //         setValue("id", data.id);
-  //       }
-  //     }
-  //   }, [data, setValue, type]);
-
   const { classes } = relatedData || { classes: [] };
 
   return (
