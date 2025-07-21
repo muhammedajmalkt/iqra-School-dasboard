@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: " YES PA Inamdar School Management Dashboard",
   description: "School Management System",
+    icons: {
+    icon: "/yeslogo.png", 
+  },
 };
 
 export default function RootLayout({

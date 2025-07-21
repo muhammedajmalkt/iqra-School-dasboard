@@ -30,7 +30,7 @@ export const createTeacher = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      emailAddress: data.email ? [data.email] : [],
+      email_addresses : data.email ? [data.email] : [],
       publicMetadata: { role: "teacher" },
     });
 
@@ -57,7 +57,7 @@ export const createTeacher = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {
+  } catch (err: any) {    
     // If Prisma failed but Clerk user was created, clean up
     if (user) {
       try {
@@ -232,7 +232,7 @@ export const createParent = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      emailAddress: data.email ? [data.email] : [],
+      email_addresses: data.email ? [data.email] : [],
       publicMetadata: { role: "parent" },
     });
 
@@ -249,7 +249,7 @@ export const createParent = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {
+  } catch (err: any) {    
     if (user) {
       try {
         const clerk = await clerkClient();
@@ -374,7 +374,7 @@ export const createStudent = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      emailAddress: data.email ? [data.email] : [],
+      email_addresses: data.email ? [data.email] : [],
       publicMetadata: { role: "student" },
     });
 

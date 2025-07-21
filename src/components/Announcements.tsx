@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 
 const Announcements = async () => {
   const { userId, sessionClaims } = await  auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
   const roleConditions = {
     teacher: { lessons: { some: { teacherId: userId! } } },
@@ -23,6 +23,7 @@ const Announcements = async () => {
       }),
     },
   });
+  
 
   return (
     <div className="bg-white p-4 rounded-md">
