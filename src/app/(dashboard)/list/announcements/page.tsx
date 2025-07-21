@@ -8,18 +8,16 @@ import { Announcement, Class, Prisma } from "@prisma/client";
 import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
-
 type AnnouncementList = Announcement & { class: Class };
 const AnnouncementListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  
   const { userId, sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
-  
+
   const columns = [
     {
       header: "Title",
@@ -43,7 +41,7 @@ const AnnouncementListPage = async ({
         ]
       : []),
   ];
-  
+
   const renderRow = (item: AnnouncementList) => (
     <tr
       key={item.id}
@@ -66,12 +64,11 @@ const AnnouncementListPage = async ({
       </td>
     </tr>
   );
-  const { page, ...queryParams } = searchParams;
 
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.AnnouncementWhereInput = {};
 
   if (queryParams) {
@@ -89,19 +86,43 @@ const AnnouncementListPage = async ({
   }
 
   // ROLE CONDITIONS
-
-  const roleConditions = {
-    teacher: { lessons: { some: { teacherId: currentUserId! } } },
-    student: { students: { some: { id: currentUserId! } } },
-    parent: { students: { some: { parentId: currentUserId! } } },
-  };
-
-  query.OR = [
-    { classId: null },
-    {
-      class: roleConditions[role as keyof typeof roleConditions] || {},
-    },
-  ];
+  switch (role) {
+    case "admin":
+      // Admin can see all announcements - no additional filtering needed
+      break;
+    case "teacher":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            lessons: { some: { teacherId: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    case "student":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            students: { some: { id: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    case "parent":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            students: { some: { parentId: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    default:
+      break;
+  }
 
   const [data, count] = await prisma.$transaction([
     prisma.announcement.findMany({

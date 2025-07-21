@@ -3,6 +3,7 @@
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import type {
+  AnnouncementSchema,
   ClassSchema,
   ExamSchema,
   LessonSchema,
@@ -766,6 +767,90 @@ export const deleteLesson = async (
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Delete lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createAnnouncement = async (
+  currentState: CurrentState,
+  data: AnnouncementSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.announcement.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        date: new Date(data.date),
+        classId: data.classId || null,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.log(err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateAnnouncement = async (
+  currentState: CurrentState,
+  data: AnnouncementSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Announcement ID is required",
+    };
+  }
+
+  try {
+    await prisma.announcement.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        title: data.title,
+        description: data.description,
+        date: new Date(data.date),
+        classId: data.classId || null,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.log(err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteAnnouncement = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = data.get("id") as string;
+
+  if (!id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Announcement ID is required",
+    };
+  }
+
+  try {
+    await prisma.announcement.delete({
+      where: {
+        id: parseInt(id),
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.log(err);
     const errorMessage = createErrorMessage(err);
     return { success: false, error: true, errorMessage };
   }

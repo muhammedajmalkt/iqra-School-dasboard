@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  deleteAnnouncement,
   deleteClass,
   deleteExam,
   deleteLesson,
@@ -23,7 +24,6 @@ import {
 } from "react";
 import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
-import { useFormState } from "react-dom";
 import DeleteConfirmation from "./confirmModal";
 
 const deleteActionMap = {
@@ -38,7 +38,7 @@ const deleteActionMap = {
   result: deleteSubject,
   attendance: deleteSubject,
   event: deleteSubject,
-  announcement: deleteSubject,
+  announcement: deleteAnnouncement,
 };
 
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
@@ -60,6 +60,9 @@ const ParentForm = dynamic(() => import("./forms/ParentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const LessonForm = dynamic(() => import("./forms/LessonForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const AnnouncementForm = dynamic(() => import("./forms/AnnouncementForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -121,6 +124,14 @@ const forms: {
   ),
   lesson: (setOpen, type, data, relatedData) => (
     <LessonForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  announcement: (setOpen, type, data, relatedData) => (
+    <AnnouncementForm
       type={type}
       data={data}
       setOpen={setOpen}
