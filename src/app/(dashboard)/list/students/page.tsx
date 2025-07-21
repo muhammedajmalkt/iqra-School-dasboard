@@ -59,7 +59,10 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
             </button>
           </Link>
           {role === "admin" && (
+            <>
+            <FormContainer table="student" type="update" data={item} />
             <FormContainer table="student" type="delete" id={item.id} />
+            </>
           )}
         </div>
       </td>
