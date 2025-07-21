@@ -27,7 +27,6 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
   const user = await currentUser();
   const role = user?.publicMetadata.role as string;
   const currentUserId = user?.id;
-
   if (type !== "delete") {
     switch (table) {
       case "subject": {
@@ -107,6 +106,25 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         };
         break;
       }
+
+      case "assignment": {
+        const assignmentLessons = await prisma.lesson.findMany({
+          where: role === "teacher" ? { teacherId: currentUserId! } : {},
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: { name: true },
+            },
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+        relatedData = { lessons: assignmentLessons };
+        break;
+      }
+
       case "announcement": {
         const classes = await prisma.class.findMany({
           select: { id: true, name: true },

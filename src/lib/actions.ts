@@ -4,6 +4,7 @@ import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import type {
   AnnouncementSchema,
+  AssignmentSchema,
   ClassSchema,
   ExamSchema,
   LessonSchema,
@@ -31,7 +32,7 @@ export const createTeacher = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      email_addresses : data.email ? [data.email] : [],
+      email_addresses: data.email ? [data.email] : [],
       publicMetadata: { role: "teacher" },
     });
 
@@ -58,7 +59,7 @@ export const createTeacher = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {    
+  } catch (err: any) {
     // If Prisma failed but Clerk user was created, clean up
     if (user) {
       try {
@@ -250,7 +251,7 @@ export const createParent = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {    
+  } catch (err: any) {
     if (user) {
       try {
         const clerk = await clerkClient();
@@ -851,6 +852,75 @@ export const deleteAnnouncement = async (
     return { success: true, error: false };
   } catch (err: any) {
     console.log(err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createAssignment = async (
+  currentState: CurrentState,
+  data: AssignmentSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.assignment.create({
+      data: {
+        title: data.title,
+        startDate: new Date(data.startDate),
+        dueDate: new Date(data.dueDate),
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create assignment error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateAssignment = async (
+  currentState: CurrentState,
+  data: AssignmentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Assignment ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.assignment.update({
+      where: { id: data.id },
+      data: {
+        title: data.title,
+        startDate: new Date(data.startDate),
+        dueDate: new Date(data.dueDate),
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update assignment error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteAssignment = async (
+  currentState: CurrentState,
+  formData: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(formData.get("id"));
+    await prisma.assignment.delete({ where: { id } });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Delete assignment error:", err);
     const errorMessage = createErrorMessage(err);
     return { success: false, error: true, errorMessage };
   }

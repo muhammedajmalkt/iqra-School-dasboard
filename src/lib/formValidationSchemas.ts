@@ -148,3 +148,46 @@ export const announcementSchema = z.object({
 });
 
 export type AnnouncementSchema = z.infer<typeof announcementSchema>;
+
+export const assignmentSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    title: z
+      .string()
+      .min(1, { message: "Title is required!" })
+      .max(100, { message: "Title must be less than 100 characters!" }),
+    startDate: z
+      .string()
+      .min(1, { message: "Start date is required!" })
+      .refine(
+        (date) => {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        },
+        { message: "Invalid start date format!" }
+      ),
+    dueDate: z
+      .string()
+      .min(1, { message: "Due date is required!" })
+      .refine(
+        (date) => {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        },
+        { message: "Invalid due date format!" }
+      ),
+    lessonId: z.coerce.number().min(1, { message: "Lesson is required!" }),
+  })
+  .refine(
+    (data) => {
+      const startDate = new Date(data.startDate);
+      const dueDate = new Date(data.dueDate);
+      return dueDate >= startDate;
+    },
+    {
+      message: "Due date must be after or equal to start date!",
+      path: ["dueDate"],
+    }
+  );
+
+export type AssignmentSchema = z.infer<typeof assignmentSchema>;
