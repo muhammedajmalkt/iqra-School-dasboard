@@ -14,6 +14,7 @@ export type FormContainerProps = {
     | "assignment"
     | "result"
     | "attendance"
+    | "teacherAttendance"
     | "event"
     | "announcement";
   type: "create" | "update" | "delete";
@@ -27,7 +28,7 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
   const user = await currentUser();
   const role = user?.publicMetadata.role as string;
   const currentUserId = user?.id;
-  
+
   if (type !== "delete") {
     switch (table) {
       case "subject": {
@@ -129,95 +130,100 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
       case "result": {
         // Fetch students - filter by teacher's classes if role is teacher
         const students = await prisma.student.findMany({
-          where: role === "teacher" 
-            ? {
-                class: {
-                  lessons: {
-                    some: {
-                      teacherId: currentUserId!
-                    }
-                  }
+          where:
+            role === "teacher"
+              ? {
+                  class: {
+                    lessons: {
+                      some: {
+                        teacherId: currentUserId!,
+                      },
+                    },
+                  },
                 }
-              }
-            : {},
-          select: { 
-            id: true, 
-            name: true, 
+              : {},
+          select: {
+            id: true,
+            name: true,
             surname: true,
             class: {
-              select: { name: true }
-            }
+              select: { name: true },
+            },
           },
         });
 
         // Format students with full name and class info
-        const formattedStudents = students.map(student => ({
+        const formattedStudents = students.map((student) => ({
           id: student.id,
-          name: `${student.name} ${student.surname}${student.class ? ` (${student.class.name})` : ''}`
+          name: `${student.name} ${student.surname}${
+            student.class ? ` (${student.class.name})` : ""
+          }`,
         }));
 
         // Fetch exams - filter by teacher if role is teacher
         const exams = await prisma.exam.findMany({
-          where: role === "teacher" 
-            ? {
-                lesson: {
-                  teacherId: currentUserId!
+          where:
+            role === "teacher"
+              ? {
+                  lesson: {
+                    teacherId: currentUserId!,
+                  },
                 }
-              }
-            : {},
-          select: { 
-            id: true, 
+              : {},
+          select: {
+            id: true,
             title: true,
             lesson: {
-              select: { 
+              select: {
                 name: true,
                 subject: {
-                  select: { name: true }
-                }
-              }
-            }
+                  select: { name: true },
+                },
+              },
+            },
           },
         });
 
         // Format exams with lesson and subject info
-        const formattedExams = exams.map(exam => ({
+        const formattedExams = exams.map((exam) => ({
           id: exam.id,
-          title: `${exam.title} (${exam.lesson.subject.name} - ${exam.lesson.name})`
+          title: `${exam.title} (${exam.lesson.subject.name} - ${exam.lesson.name})`,
         }));
 
         // Fetch assignments - filter by teacher if role is teacher
         const assignments = await prisma.assignment.findMany({
-          where: role === "teacher" 
-            ? {
-                lesson: {
-                  teacherId: currentUserId!
+          where:
+            role === "teacher"
+              ? {
+                  lesson: {
+                    teacherId: currentUserId!,
+                  },
                 }
-              }
-            : {},
-          select: { 
-            id: true, 
+              : {},
+          select: {
+            id: true,
             title: true,
             lesson: {
-              select: { 
+              select: {
                 name: true,
                 subject: {
-                  select: { name: true }
-                }
-              }
-            }
+                  select: { name: true },
+                },
+              },
+            },
           },
         });
 
         // Format assignments with lesson and subject info
-        const formattedAssignments = assignments.map(assignment => ({
+        const formattedAssignments = assignments.map((assignment) => ({
           id: assignment.id,
-          title: `${assignment.title} (${assignment.lesson.subject.name} - ${assignment.lesson.name})`
+          title: `${assignment.title} (${assignment.lesson.subject.name} - ${assignment.lesson.name})`,
         }));
 
-        relatedData = { 
+        relatedData = {
           students: formattedStudents,
           exams: formattedExams,
-          assignments: formattedAssignments
+          assignments: formattedAssignments,
         };
         break;
       }
@@ -233,6 +239,118 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         break;
       }
 
+      case "attendance": {
+        const students = await prisma.student.findMany({
+          where:
+            role === "teacher"
+              ? {
+                  class: {
+                    lessons: {
+                      some: {
+                        teacherId: currentUserId!,
+                      },
+                    },
+                  },
+                }
+              : {},
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+
+        const formattedStudents = students.map((student) => ({
+          id: student.id,
+          name: `${student.name} ${student.surname}${
+            student.class ? ` (${student.class.name})` : ""
+          }`,
+        }));
+
+        const lessons = await prisma.lesson.findMany({
+          where: role === "teacher" ? { teacherId: currentUserId! } : {},
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: { name: true },
+            },
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+
+        const formattedLessons = lessons.map((lesson) => ({
+          id: lesson.id,
+          title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.name})`,
+        }));
+
+        relatedData = {
+          students: formattedStudents,
+          lessons: formattedLessons,
+        };
+        break;
+      }
+      case "teacherAttendance": {
+        const students = await prisma.student.findMany({
+          where:
+            role === "teacher"
+              ? {
+                  class: {
+                    lessons: {
+                      some: {
+                        teacherId: currentUserId!,
+                      },
+                    },
+                  },
+                }
+              : {},
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+
+        const formattedStudents = students.map((student) => ({
+          id: student.id,
+          name: `${student.name} ${student.surname}${
+            student.class ? ` (${student.class.name})` : ""
+          }`,
+        }));
+
+        const lessons = await prisma.lesson.findMany({
+          where: role === "teacher" ? { teacherId: currentUserId! } : {},
+          select: {
+            id: true,
+            name: true,
+            subject: {
+              select: { name: true },
+            },
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+
+        const formattedLessons = lessons.map((lesson) => ({
+          id: lesson.id,
+          title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.name})`,
+        }));
+
+        relatedData = {
+          students: formattedStudents,
+          lessons: formattedLessons,
+        };
+        break;
+      }
       default:
         break;
     }

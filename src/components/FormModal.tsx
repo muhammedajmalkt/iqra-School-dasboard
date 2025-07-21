@@ -3,6 +3,7 @@
 import {
   deleteAnnouncement,
   deleteAssignment,
+  deleteAttendance,
   deleteClass,
   deleteExam,
   deleteLesson,
@@ -40,9 +41,10 @@ const deleteActionMap = {
   lesson: deleteLesson,
   assignment: deleteAssignment,
   result: deleteResult,
-  attendance: deleteSubject,
+  attendance: deleteAttendance,
   event: deleteSubject,
   announcement: deleteAnnouncement,
+  teacherAttendance: deleteAnnouncement,
 };
 
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
@@ -85,6 +87,17 @@ const ResultForm = dynamic(() => import("./forms/ResultForm"), {
   loading: () => <FormLoadingSkeleton formType="result" />,
   ssr: false,
 });
+const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), {
+  loading: () => <FormLoadingSkeleton formType="attendance" />,
+  ssr: false,
+});
+const TeacherAttendanceForm = dynamic(
+  () => import("./forms/TeacherAttendanceForm"),
+  {
+    loading: () => <FormLoadingSkeleton formType="attendance" />,
+    ssr: false,
+  }
+);
 
 const forms: {
   [key: string]: (
@@ -168,6 +181,22 @@ const forms: {
   ),
   result: (setOpen, type, data, relatedData) => (
     <ResultForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  attendance: (setOpen, type, data, relatedData) => (
+    <AttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  teacherAttendance: (setOpen, type, data, relatedData) => (
+    <TeacherAttendanceForm
       type={type}
       data={data}
       setOpen={setOpen}

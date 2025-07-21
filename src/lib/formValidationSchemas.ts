@@ -209,3 +209,39 @@ export const resultSchema = z
   });
 
 export type ResultSchema = z.infer<typeof resultSchema>;
+
+export const attendanceSchema = z.object({
+  id: z.number().optional(),
+  date: z
+    .string()
+    .min(1, "Date is required")
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+  present: z.coerce.boolean().refine((val) => typeof val === "boolean", {
+    message: "Present must be a valid boolean value",
+  }),
+  studentId: z.string().min(1, "Student is required"),
+  lessonId: z.coerce.number().min(1, "Lesson is required"),
+});
+
+export type AttendanceSchema = z.infer<typeof attendanceSchema>;
+export const teacherAttendanceSchema = z.object({
+  date: z
+    .string()
+    .min(1, "Date is required")
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+  lessonId: z.coerce.number().min(1, "Lesson is required"),
+  attendances: z
+    .array(
+      z.object({
+        studentId: z.string().min(1, "Student ID is required"),
+        present: z.boolean(),
+      })
+    )
+    .min(1, "At least one student must be selected"),
+});
+
+export type TeacherAttendanceSchema = z.infer<typeof teacherAttendanceSchema>;
