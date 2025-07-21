@@ -1,9 +1,16 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
-import type { TeacherSchema } from "./formValidationSchemas";
+import type {
+  ClassSchema,
+  ExamSchema,
+  LessonSchema,
+  ParentSchema,
+  StudentSchema,
+  SubjectSchema,
+  TeacherSchema,
+} from "./formValidationSchemas";
 import { createErrorMessage } from "./utils";
 
 type CurrentState = { success: boolean; error: boolean; errorMessage?: string };
@@ -49,7 +56,6 @@ export const createTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err: any) {
     // If Prisma failed but Clerk user was created, clean up
@@ -144,7 +150,6 @@ export const updateTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -168,7 +173,6 @@ export const deleteTeacher = async (
       },
     });
 
-    revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -192,7 +196,6 @@ export const deleteStudent = async (
       },
     });
 
-    revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
     console.log(err);
@@ -200,18 +203,480 @@ export const deleteStudent = async (
   }
 };
 
+export const deleteSubject = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(data.get("id"));
+
+    await prisma.subject.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (error) {
+    console.log(error);
+    return { success: false, error: true };
+  }
+};
+
+export const createParent = async (
+  currentState: CurrentState,
+  data: ParentSchema
+): Promise<CurrentState> => {
+  let user;
+
+  try {
+    const clerk = await clerkClient();
+
+    user = await clerk.users.createUser({
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      emailAddress: data.email ? [data.email] : [],
+      publicMetadata: { role: "parent" },
+    });
+
+    await prisma.parent.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    if (user) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(user.id);
+      } catch (cleanupError) {
+        console.error("Failed to rollback Clerk user:", cleanupError);
+      }
+    }
+
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateParent = async (
+  currentState: CurrentState,
+  data: ParentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true };
+  }
+
+  try {
+    const clerk = await clerkClient();
+
+    // Update Clerk user info
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      ...(data.password !== "" && { password: data.password }),
+      firstName: data.name,
+      lastName: data.surname,
+    });
+
+    // Email update logic (if provided)
+    if (data.email) {
+      try {
+        const user = await clerk.users.getUser(data.id);
+        const primaryEmail = user.emailAddresses.find(
+          (email) => email.id === user.primaryEmailAddressId
+        );
+
+        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
+          const newEmail = await clerk.emailAddresses.createEmailAddress({
+            userId: data.id,
+            emailAddress: data.email,
+            verified: true,
+          });
+
+          await clerk.users.updateUser(data.id, {
+            primaryEmailAddressID: newEmail.id,
+          });
+
+          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
+        }
+      } catch (emailError) {
+        console.log("Email update error:", emailError);
+      }
+    }
+
+    // Update parent in Prisma
+    await prisma.parent.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone,
+        address: data.address,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Parent update error:", err);
+    return { success: false, error: true };
+  }
+};
+
+export const deleteParent = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = data.get("id") as string;
+
+  try {
+    const clerk = await clerkClient();
+
+    // Delete from Clerk
+    await clerk.users.deleteUser(id);
+
+    // Delete from Prisma
+    await prisma.parent.delete({
+      where: {
+        id: id,
+      },
+    });
+
+    // Revalidate parent list page
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Parent deletion failed:", err);
+    const errorMessage = createErrorMessage(err); // Optional error handler
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  let user;
+  console.log("create student:", data);
+  try {
+    const clerk = await clerkClient();
+
+    user = await clerk.users.createUser({
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      emailAddress: data.email ? [data.email] : [],
+      publicMetadata: { role: "student" },
+    });
+
+    await prisma.student.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        classId: data.classId,
+        gradeId: data.gradeId,
+        parentId: data.parentId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    if (user) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(user.id);
+      } catch (cleanupError) {
+        console.error("Failed to rollback Clerk user:", cleanupError);
+      }
+    }
+
+    const errorMessage = createErrorMessage(err);
+    console.log("errorMessage:", errorMessage);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true };
+  }
+
+  try {
+    const clerk = await clerkClient();
+
+    // Update Clerk user
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      ...(data.password !== "" && { password: data.password }),
+      firstName: data.name,
+      lastName: data.surname,
+    });
+
+    // Update email in Clerk if provided
+    if (data.email) {
+      try {
+        const user = await clerk.users.getUser(data.id);
+        const primaryEmail = user.emailAddresses.find(
+          (email) => email.id === user.primaryEmailAddressId
+        );
+
+        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
+          const newEmailAddress = await clerk.emailAddresses.createEmailAddress(
+            {
+              userId: data.id,
+              emailAddress: data.email,
+              verified: true,
+            }
+          );
+
+          await clerk.users.updateUser(data.id, {
+            primaryEmailAddressID: newEmailAddress.id,
+          });
+
+          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
+        }
+      } catch (emailError) {
+        console.log("Email update error:", emailError);
+      }
+    }
+
+    // Update in Prisma DB
+    await prisma.student.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        parentId: data.parentId,
+        classId: Number(data.classId),
+        gradeId: Number(data.gradeId),
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Student update failed:", err);
+    const errorMessage = createErrorMessage(err); // Optional
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createSubject = async (
+  currentState: CurrentState,
+  data: SubjectSchema
+): Promise<CurrentState> => {
+  try {
+    console.log("data:", data);
+    await prisma.subject.create({
+      data: {
+        name: data.name,
+        teachers: {
+          connect: data.teachers?.map((teacherId: string) => ({
+            id: teacherId,
+          })),
+        },
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create subject error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateSubject = async (
+  currentState: CurrentState,
+  data: SubjectSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Subject ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.subject.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        name: data.name,
+        teachers: {
+          set: [], // Clear existing connections
+          connect: data.teachers?.map((teacherId: string) => ({
+            id: teacherId,
+          })),
+        },
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update subject error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createClass = async (
+  currentState: CurrentState,
+  data: ClassSchema
+): Promise<CurrentState> => {
+  try {
+    console.log("data:", data);
+    await prisma.class.create({
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        supervisorId: data.supervisorId || null,
+        gradeId: data.gradeId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create class error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateClass = async (
+  currentState: CurrentState,
+  data: ClassSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Class ID is required for update",
+    };
+  }
+
+  try {
+    console.log("update data:", data);
+    await prisma.class.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        supervisorId: data.supervisorId || null,
+        gradeId: data.gradeId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update class error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
 export const deleteClass = async (
   currentState: CurrentState,
   data: FormData
-) : Promise<CurrentState>=> {
+): Promise<CurrentState> => {
   try {
     const id = Number(data.get("id"));
 
     await prisma.class.delete({ where: { id } });
     return { success: true, error: false };
   } catch (error) {
-    console.log(error);
-    return { success: false, error: true };
+    const errorMessage = createErrorMessage(error);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createExam = async (
+  currentState: CurrentState,
+  data: ExamSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.exam.create({
+      data: {
+        title: data.title,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create exam error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateExam = async (
+  currentState: CurrentState,
+  data: ExamSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Exam ID is required for update",
+    };
+  }
+
+  try {
+    console.log("update data:", data);
+    await prisma.exam.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        title: data.title,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        lessonId: data.lessonId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update exam error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
   }
 };
 
@@ -226,21 +691,82 @@ export const deleteExam = async (
     return { success: true, error: false };
   } catch (error) {
     console.log(error);
-    return { success: false, error: true };
+    const errorMessage = createErrorMessage(error);
+    return { success: false, error: true, errorMessage };
   }
 };
 
-export const deleteSubject = async (
+export const createLesson = async (
   currentState: CurrentState,
-  data: FormData
-) : Promise<CurrentState>=> {
+  data: LessonSchema
+): Promise<CurrentState> => {
   try {
-    const id = Number(data.get("id"));
+    await prisma.lesson.create({
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        subjectId: data.subjectId,
+        classId: data.classId,
+        teacherId: data.teacherId,
+      },
+    });
 
-    await prisma.subject.delete({ where: { id } });
     return { success: true, error: false };
-  } catch (error) {
-    console.log(error);
-    return { success: false, error: true };
+  } catch (err: any) {
+    console.error("Create lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateLesson = async (
+  currentState: CurrentState,
+  data: LessonSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: "Lesson ID is required for update",
+    };
+  }
+
+  try {
+    await prisma.lesson.update({
+      where: { id: data.id },
+      data: {
+        name: data.name,
+        day: data.day,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        subjectId: data.subjectId,
+        classId: data.classId,
+        teacherId: data.teacherId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const deleteLesson = async (
+  currentState: CurrentState,
+  formData: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(formData.get("id"));
+    await prisma.lesson.delete({ where: { id } });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Delete lesson error:", err);
+    const errorMessage = createErrorMessage(err);
+    return { success: false, error: true, errorMessage };
   }
 };

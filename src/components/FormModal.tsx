@@ -3,6 +3,8 @@
 import {
   deleteClass,
   deleteExam,
+  deleteLesson,
+  deleteParent,
   deleteStudent,
   deleteSubject,
   deleteTeacher,
@@ -22,6 +24,7 @@ import {
 import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
 import { useFormState } from "react-dom";
+import DeleteConfirmation from "./confirmModal";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -29,8 +32,8 @@ const deleteActionMap = {
   teacher: deleteTeacher,
   student: deleteStudent,
   exam: deleteExam,
-  parent: deleteSubject,
-  lesson: deleteSubject,
+  parent: deleteParent,
+  lesson: deleteLesson,
   assignment: deleteSubject,
   result: deleteSubject,
   attendance: deleteSubject,
@@ -51,6 +54,12 @@ const ClassForm = dynamic(() => import("./forms/ClassForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 const ExamForm = dynamic(() => import("./forms/ExamForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ParentForm = dynamic(() => import("./forms/ParentForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const LessonForm = dynamic(() => import("./forms/LessonForm"), {
   loading: () => <h1>Loading...</h1>,
 });
 
@@ -102,6 +111,22 @@ const forms: {
       relatedData={relatedData}
     />
   ),
+  parent: (setOpen, type, data, relatedData) => (
+    <ParentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  lesson: (setOpen, type, data, relatedData) => (
+    <LessonForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
 const FormModal = ({
@@ -125,7 +150,7 @@ const FormModal = ({
 
   const Form = () => {
     const [isPending] = useTransition();
-    const [state, formAction] = useFormState(deleteActionMap[table], {
+    const [state, formAction] = useActionState(deleteActionMap[table], {
       success: false,
       error: false,
     });
@@ -148,23 +173,22 @@ const FormModal = ({
 
     if (type === "delete" && id) {
       return (
-        <form action={formAction} className="p-4 flex flex-col gap-4">
-          <input type="hidden" name="id" value={id} />
-          <span className="text-center font-medium">
-            All data will be lost. Are you sure you want to delete this {table}?
-          </span>
-          <button
-            type="submit"
-            className="bg-red-700 text-white py-2 px-4 rounded-md self-center"
-          >
-            {isPending ? "Loading..." : "Delete"}
-          </button>
-        </form>
+        <DeleteConfirmation
+          id={id}
+          table={table}
+          formAction={formAction}
+          isPending={isPending}
+          setOpen={setOpen}
+          // Optional: customize messages
+          // customMessage="Are you sure you want to remove this exam permanently?"
+          // customWarning="This will affect all students who have taken this exam."
+        />
       );
     }
 
     if (type === "create" || type === "update") {
       const FormComponent = forms[table];
+
       return FormComponent ? (
         FormComponent(setOpen, type, data, relatedData)
       ) : (
@@ -209,10 +233,22 @@ const FormModal = ({
             <Form />
             <button
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 hover:rotate-90 transition-transform"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:rotate-90 transition-all duration-300"
               aria-label="Close"
             >
-              <Image src="/close.png" alt="Close" width={16} height={16} />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
         </div>

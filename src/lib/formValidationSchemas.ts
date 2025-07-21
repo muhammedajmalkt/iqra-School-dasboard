@@ -85,9 +85,56 @@ export type StudentSchema = z.infer<typeof studentSchema>;
 export const examSchema = z.object({
   id: z.coerce.number().optional(),
   title: z.string().min(1, { message: "Title name is required!" }),
-  startTime: z.coerce.date({ message: "Start time is required!" }),
-  endTime: z.coerce.date({ message: "End time is required!" }),
+  startTime: z.string().min(1, { message: "Start time is required!" }),
+  endTime: z.string().min(1, { message: "End time is required!" }),
+
   lessonId: z.coerce.number({ message: "Lesson is required!" }),
 });
 
 export type ExamSchema = z.infer<typeof examSchema>;
+
+export const parentSchema = z.object({
+  id: z.string().optional(),
+  username: z
+    .string()
+    .min(3, { message: "Username must be at least 3 characters long!" })
+    .max(20, { message: "Username must be at most 20 characters long!" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters long!" })
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])/, {
+      message:
+        "Password must contain at least one uppercase letter, one lowercase letter!",
+    })
+    .optional()
+    .or(z.literal("")),
+  name: z.string().min(1, { message: "First name is required!" }),
+  surname: z.string().min(1, { message: "Last name is required!" }),
+  email: z
+    .string()
+    .email({ message: "Invalid email address!" })
+    .optional()
+    .or(z.literal("")),
+  phone: z
+    .string()
+    .min(10, { message: "Phone number must be at least 10 digits!" })
+    .max(15, { message: "Phone number must be at most 15 digits!" }),
+  address: z.string().min(1, { message: "Address is required!" }),
+});
+
+export type ParentSchema = z.infer<typeof parentSchema>;
+
+export const lessonSchema = z.object({
+  id: z.coerce.number().optional(),
+  name: z.string().min(1, { message: "Lesson name is required" }),
+  day: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"], {
+    required_error: "Day is required",
+  }),
+  startTime: z.string().min(1, { message: "Start time is required" }),
+  endTime: z.string().min(1, { message: "End time is required" }),
+  subjectId: z.coerce.number({ message: "Subject is required" }),
+  classId: z.coerce.number({ message: "Class is required" }),
+  teacherId: z.string().min(1, { message: "Teacher is required" }),
+});
+
+export type LessonSchema = z.infer<typeof lessonSchema>;

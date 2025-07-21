@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { subjectSchema, SubjectSchema } from "@/lib/formValidationSchemas";
 import { createSubject, updateSubject } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useActionState, useTransition } from "react";
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -27,21 +27,26 @@ const SubjectForm = ({
     formState: { errors },
   } = useForm<SubjectSchema>({
     resolver: zodResolver(subjectSchema),
+    defaultValues: {
+      name: data?.name || "",
+      teachers: data?.teachers?.map((teacher: any) => teacher.id) || [],
+    },
   });
 
-  // AFTER REACT 19 IT'LL BE USEACTIONSTATE
-
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createSubject : updateSubject,
     {
       success: false,
       error: false,
     }
   );
+  
+  const [isPending, startTransition] = useTransition();
 
-  const onSubmit = handleSubmit((data) => {
-    console.log(data);
-    formAction(data);
+  const onSubmit = handleSubmit((formData) => {
+    startTransition(() => {
+      formAction(formData);
+    });
   });
 
   const router = useRouter();
@@ -70,6 +75,7 @@ const SubjectForm = ({
           register={register}
           error={errors?.name}
         />
+
         {data && (
           <InputField
             label="Id"
@@ -80,13 +86,16 @@ const SubjectForm = ({
             hidden
           />
         )}
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
+
+        <div className="flex flex-col gap-2 w-full md:w-1/2">
           <label className="text-xs text-gray-500">Teachers</label>
           <select
             multiple
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full min-h-[100px]"
             {...register("teachers")}
-            defaultValue={data?.teachers}
+            defaultValue={
+              data?.teachers?.map((teacher: any) => teacher.id) || []
+            }
           >
             {teachers.map(
               (teacher: { id: string; name: string; surname: string }) => (
@@ -96,6 +105,9 @@ const SubjectForm = ({
               )
             )}
           </select>
+          <p className="text-xs text-gray-400">
+            Hold Ctrl/Cmd to select multiple teachers
+          </p>
           {errors.teachers?.message && (
             <p className="text-xs text-red-400">
               {errors.teachers.message.toString()}
@@ -103,11 +115,26 @@ const SubjectForm = ({
           )}
         </div>
       </div>
-      {state.error && (
+
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
+      )}
+      {state.error && !state.errorMessage && (
         <span className="text-red-500">Something went wrong!</span>
       )}
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+
+      <button
+        type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+        disabled={isPending}
+      >
+        {isPending
+          ? type === "create"
+            ? "Creating..."
+            : "Updating..."
+          : type === "create"
+          ? "Create"
+          : "Update"}
       </button>
     </form>
   );
