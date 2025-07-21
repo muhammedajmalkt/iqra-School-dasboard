@@ -9,6 +9,7 @@ import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 
 type AnnouncementList = Announcement & { class: Class };
+
 const AnnouncementListPage = async ({
   searchParams,
 }: {
@@ -17,6 +18,7 @@ const AnnouncementListPage = async ({
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
+
 
   const columns = [
     {
@@ -42,6 +44,7 @@ const AnnouncementListPage = async ({
       : []),
   ];
 
+
   const renderRow = (item: AnnouncementList) => (
     <tr
       key={item.id}
@@ -65,24 +68,19 @@ const AnnouncementListPage = async ({
     </tr>
   );
 
+
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
   const query: Prisma.AnnouncementWhereInput = {};
 
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "search":
-            query.title = { contains: value, mode: "insensitive" };
-            break;
-          default:
-            break;
-        }
-      }
-    }
+  // Search condition
+  if (queryParams?.search) {
+    query.title = {
+      contains: queryParams.search,
+      mode: "insensitive",
+    };
   }
 
   // ROLE CONDITIONS
@@ -124,17 +122,13 @@ const AnnouncementListPage = async ({
       break;
   }
 
-  const [data, count] = await prisma.$transaction([
-    prisma.announcement.findMany({
-      where: query,
-      include: {
-        class: true,
-      },
-      take: ITEM_PER_PAGE,
-      skip: ITEM_PER_PAGE * (p - 1),
-    }),
-    prisma.announcement.count({ where: query }),
-  ]);
+const [data, count] = await prisma.$transaction([
+  prisma.announcement.findMany({
+    include: { class: true },
+  }),
+  prisma.announcement.count(),
+]);
+
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -158,8 +152,10 @@ const AnnouncementListPage = async ({
           </div>
         </div>
       </div>
+
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
+
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
