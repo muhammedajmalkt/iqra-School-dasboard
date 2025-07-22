@@ -34,6 +34,9 @@ const AttendanceListPage = async ({
     orderBy: { name: "asc" },
   });
 
+  // Check if we want all records (explicit filter with showAll=true)
+  const showAllRecords = queryParams.showAll === "true";
+
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
@@ -62,8 +65,11 @@ const AttendanceListPage = async ({
             break;
           case "lessonId": // New case for lesson filtering
             if (value) {
-              query.lessonId = value;
+              query.lessonId = Number(value);
             }
+            break;
+          case "showAll":
+            // Don't apply date filter when showAll is true
             break;
           default:
             break;
@@ -72,8 +78,15 @@ const AttendanceListPage = async ({
     }
   }
 
-  // If no date filter is applied, default to today's records
-  if (!queryParams.date && !queryParams.search) {
+  // Apply default date filter only if no explicit filters are set
+  // and showAll is not true
+  if (
+    !showAllRecords &&
+    !queryParams.date &&
+    !queryParams.search &&
+    !queryParams.present &&
+    !queryParams.lessonId
+  ) {
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
     const endOfDay = new Date(today.setHours(23, 59, 59, 999));
@@ -86,7 +99,13 @@ const AttendanceListPage = async ({
   // Handle sorting - prioritize by present status, then by student name for today's view
   const currentSort =
     queryParams.sort ||
-    (queryParams.date || !queryParams.search ? "present_desc" : "date_desc");
+    (showAllRecords ||
+    queryParams.search ||
+    queryParams.present ||
+    queryParams.lessonId
+      ? "date_desc"
+      : "present_desc");
+
   const orderBy: Prisma.AttendanceOrderByWithRelationInput = (() => {
     switch (currentSort) {
       case "date_asc":
@@ -106,9 +125,12 @@ const AttendanceListPage = async ({
       case "present_desc":
         return [{ present: "desc" }, { student: { name: "asc" } }];
       default:
-        return queryParams.date || !queryParams.search
-          ? [{ present: "desc" }, { student: { name: "asc" } }]
-          : { date: "desc" };
+        return showAllRecords ||
+          queryParams.search ||
+          queryParams.present ||
+          queryParams.lessonId
+          ? { date: "desc" }
+          : [{ present: "desc" }, { student: { name: "asc" } }];
     }
   })();
 
@@ -231,25 +253,37 @@ const AttendanceListPage = async ({
         : 0,
   };
 
+  // Determine the current view for display
+  const isToday =
+    !showAllRecords &&
+    !queryParams.date &&
+    !queryParams.search &&
+    !queryParams.present &&
+    !queryParams.lessonId;
+  const isYesterday =
+    queryParams.date ===
+    new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const isSpecificDate =
+    queryParams.date &&
+    !isYesterday &&
+    queryParams.date !== new Date().toISOString().split("T")[0];
+  console.log("isToday", isToday);
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-col">
           <h1 className="hidden md:block text-lg font-semibold">
-            {queryParams.date === new Date().toISOString().split("T")[0] ||
-            (!queryParams.date && !queryParams.search)
+            {isToday
               ? "Today's Attendance"
-              : queryParams.date ===
-                new Date(Date.now() - 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0]
+              : isYesterday
               ? "Yesterday's Attendance"
+              : showAllRecords
+              ? "All Attendance Records"
               : "Attendance Records"}
           </h1>
           <p className="text-sm text-gray-500">
-            {queryParams.date === new Date().toISOString().split("T")[0] ||
-            (!queryParams.date && !queryParams.search)
+            {isToday
               ? `Track today's attendance - ${new Date().toLocaleDateString(
                   "en-US",
                   {
@@ -258,26 +292,25 @@ const AttendanceListPage = async ({
                     day: "numeric",
                   }
                 )}`
-              : queryParams.date ===
-                new Date(Date.now() - 24 * 60 * 60 * 1000)
-                  .toISOString()
-                  .split("T")[0]
+              : isYesterday
               ? `Yesterday's attendance records`
-              : queryParams.date
-              ? `Attendance for ${new Date(queryParams.date).toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}`
-              : "All attendance records"}
+              : isSpecificDate
+              ? `Attendance for ${new Date(
+                  queryParams.date!
+                ).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}`
+              : showAllRecords
+              ? "All attendance records from all dates"
+              : "Filtered attendance records"}
             {queryParams.lessonId &&
               ` | Lesson: ${
-                lessons.find((lesson) => lesson.id === queryParams.lessonId)
-                  ?.name
+                lessons.find(
+                  (lesson) => lesson.id === Number(queryParams.lessonId)
+                )?.name
               }`}
           </p>
         </div>
@@ -325,13 +358,14 @@ const AttendanceListPage = async ({
                     <div className="flex flex-col gap-1">
                       <Link
                         href={`/list/attendance?${getQueryString({
-                          ...queryParams,
+                          search: queryParams.search,
+                          sort: queryParams.sort,
+                          present: queryParams.present,
+                          lessonId: queryParams.lessonId,
                           date: new Date().toISOString().split("T")[0],
                         })}`}
                         className={`px-3 py-2 text-xs rounded font-medium ${
-                          queryParams.date ===
-                            new Date().toISOString().split("T")[0] ||
-                          (!queryParams.date && !queryParams.search)
+                          isToday
                             ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
@@ -340,16 +374,16 @@ const AttendanceListPage = async ({
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
-                          ...queryParams,
+                          search: queryParams.search,
+                          sort: queryParams.sort,
+                          present: queryParams.present,
+                          lessonId: queryParams.lessonId,
                           date: new Date(Date.now() - 24 * 60 * 60 * 1000)
                             .toISOString()
                             .split("T")[0],
                         })}`}
                         className={`px-3 py-2 text-xs rounded font-medium ${
-                          queryParams.date ===
-                          new Date(Date.now() - 24 * 60 * 60 * 1000)
-                            .toISOString()
-                            .split("T")[0]
+                          isYesterday
                             ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
@@ -362,10 +396,11 @@ const AttendanceListPage = async ({
                           sort: queryParams.sort,
                           present: queryParams.present,
                           lessonId: queryParams.lessonId,
+                          showAll: "true",
                         })}`}
                         className={`px-3 py-2 text-xs rounded font-medium ${
-                          !queryParams.date
-                            ? "bg-gray-100 hover:bg-gray-50 text-gray-700"
+                          showAllRecords
+                            ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-gray-50 text-gray-700"
                         }`}
                       >
@@ -425,54 +460,91 @@ const AttendanceListPage = async ({
                             Go
                           </button>
                         </form>
-                        {queryParams.date &&
-                          queryParams.date !==
-                            new Date().toISOString().split("T")[0] &&
-                          queryParams.date !==
-                            new Date(Date.now() - 24 * 60 * 60 * 1000)
-                              .toISOString()
-                              .split("T")[0] && (
-                            <p className="text-xs text-blue-600 mt-1">
-                              📅 Showing:{" "}
-                              {new Date(queryParams.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "long",
-                                  month: "long",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }
-                              )}
-                            </p>
-                          )}
+                        {isSpecificDate && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            📅 Showing:{" "}
+                            {new Date(queryParams.date!).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Lesson Filter */}
-                  {/* <div className="mb-3 border-t pt-2">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">
-                      Lesson Filter
+                  <div className="mb-3 border-t pt-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      🎓 Lesson Filter
                     </label>
-                    <div className="flex flex-col gap-1">
-                      {lessons.map((lesson) => (
-                        <Link
-                          key={lesson.id}
-                          href={`/list/attendance?${getQueryString({
-                            ...queryParams,
-                            lessonId: lesson.id,
-                          })}`}
-                          className={`px-3 py-2 text-xs rounded font-medium ${
-                            queryParams.lessonId === lesson.id
-                              ? "bg-blue-500 text-white"
-                              : "bg-gray-100 hover:bg-blue-50 text-gray-700"
-                          }`}
-                        >
-                          📚 {lesson.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div> */}
+                    <form
+                      method="GET"
+                      action="/list/attendance"
+                      className="flex gap-2 flex-col sm:flex-row"
+                    >
+                      {/* Preserve other query params */}
+                      {queryParams.search && (
+                        <input
+                          type="hidden"
+                          name="search"
+                          value={queryParams.search}
+                        />
+                      )}
+                      {queryParams.sort && (
+                        <input
+                          type="hidden"
+                          name="sort"
+                          value={queryParams.sort}
+                        />
+                      )}
+                      {queryParams.present && (
+                        <input
+                          type="hidden"
+                          name="present"
+                          value={queryParams.present}
+                        />
+                      )}
+                      {queryParams.date && (
+                        <input
+                          type="hidden"
+                          name="date"
+                          value={queryParams.date}
+                        />
+                      )}
+                      {queryParams.showAll && (
+                        <input
+                          type="hidden"
+                          name="showAll"
+                          value={queryParams.showAll}
+                        />
+                      )}
+
+                      <select
+                        name="lessonId"
+                        defaultValue={queryParams.lessonId || ""}
+                        className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 scrollbar-hide"
+                      >
+                        <option value="">All Lessons</option>
+                        {lessons.map((lesson) => (
+                          <option key={lesson.id} value={lesson.id}>
+                            {lesson.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="submit"
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Apply
+                      </button>
+                    </form>
+                  </div>
 
                   <div className="mb-2 border-t pt-2">
                     <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -510,13 +582,11 @@ const AttendanceListPage = async ({
 
                   {(queryParams.present ||
                     queryParams.date ||
-                    queryParams.lessonId) && (
+                    queryParams.lessonId ||
+                    showAllRecords) && (
                     <div className="border-t pt-2">
                       <Link
-                        href={`/list/attendance?${getQueryString({
-                          search: queryParams.search,
-                          sort: queryParams.sort,
-                        })}`}
+                        href="/list/attendance"
                         className="block text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-2 rounded hover:bg-blue-50"
                       >
                         🔄 Clear All Filters

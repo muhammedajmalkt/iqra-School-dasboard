@@ -245,3 +245,14 @@ export const teacherAttendanceSchema = z.object({
 });
 
 export type TeacherAttendanceSchema = z.infer<typeof teacherAttendanceSchema>;
+
+export const eventSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  classId: z.union([z.string().min(1), z.literal("")]).optional(), // if class is optional
+});
+
+export type EventSchema = z.infer<typeof eventSchema>;

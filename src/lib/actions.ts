@@ -3,6 +3,7 @@
 import prisma from "./prisma";
 import { clerkClient } from "@clerk/nextjs/server";
 import {
+  EventSchema,
   teacherAttendanceSchema,
   type AnnouncementSchema,
   type AssignmentSchema,
@@ -1102,5 +1103,79 @@ export const createAttendances = async (
         ? err.errors.map((e) => e.message).join(", ")
         : "An error occurred while recording attendances";
     return { success: false, error: true, errorMessage };
+  }
+};
+
+export const createEvent = async (
+  currentState: CurrentState,
+  data: EventSchema
+): Promise<CurrentState> => {
+  try {
+    await prisma.event.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        classId: data.classId ? Number(data.classId) : null,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create event error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const updateEvent = async (
+  currentState: CurrentState,
+  data: EventSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true, errorMessage: "Missing event ID" };
+  }
+
+  try {
+    await prisma.event.update({
+      where: { id: data.id },
+      data: {
+        title: data.title,
+        description: data.description,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
+        classId: data.classId ? Number(data.classId) : null,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update event error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const deleteEvent = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = Number(data.get("id"));
+  try {
+    await prisma.event.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
   }
 };

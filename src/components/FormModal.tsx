@@ -5,6 +5,7 @@ import {
   deleteAssignment,
   deleteAttendance,
   deleteClass,
+  deleteEvent,
   deleteExam,
   deleteLesson,
   deleteParent,
@@ -42,7 +43,7 @@ const deleteActionMap = {
   assignment: deleteAssignment,
   result: deleteResult,
   attendance: deleteAttendance,
-  event: deleteSubject,
+  event: deleteEvent,
   announcement: deleteAnnouncement,
   teacherAttendance: deleteAnnouncement,
 };
@@ -95,6 +96,13 @@ const TeacherAttendanceForm = dynamic(
   () => import("./forms/TeacherAttendanceForm"),
   {
     loading: () => <FormLoadingSkeleton formType="attendance" />,
+    ssr: false,
+  }
+);
+const EventForm = dynamic(
+  () => import("./forms/EventForm"),
+  {
+    loading: () => <FormLoadingSkeleton formType="event" />,
     ssr: false,
   }
 );
@@ -197,6 +205,14 @@ const forms: {
   ),
   teacherAttendance: (setOpen, type, data, relatedData) => (
     <TeacherAttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  event: (setOpen, type, data, relatedData) => (
+    <EventForm
       type={type}
       data={data}
       setOpen={setOpen}
@@ -335,7 +351,7 @@ const FormModal = ({
       </button>
 
       {open && (
-        <div className="w-full fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center overflow-y-scroll">
+        <div className="w-full fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center overflow-y-scroll scrollbar-hide">
           <div
             ref={modalRef}
             className="relative bg-white p-6 rounded-xl shadow-lg w-[90%] max-w-2xl animate-fadeIn"

@@ -111,7 +111,7 @@ const TeacherAttendanceForm = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-h-72 overflow-y-scroll scrollbar-hide">
         <span className="text-xs text-gray-400 font-medium">Students</span>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
