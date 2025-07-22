@@ -41,7 +41,7 @@ const ParentListPage = async ({
   }
 
   // Handle sorting
-  const currentSort = queryParams.sort || "name_asc";
+  const currentSort = queryParams.sort || "created_desc";
   const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
     switch (currentSort) {
       case "name_asc":

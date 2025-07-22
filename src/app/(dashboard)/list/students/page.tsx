@@ -99,7 +99,7 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   }
 
   // SORT LOGIC
-  const currentSort = queryParams.sort || "name_asc";
+  const currentSort = queryParams.sort || "created_desc";
   const orderBy: Prisma.StudentOrderByWithRelationInput = (() => {
     switch (currentSort) {
       case "name_asc":
