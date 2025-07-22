@@ -138,3 +138,121 @@ export const lessonSchema = z.object({
 });
 
 export type LessonSchema = z.infer<typeof lessonSchema>;
+
+export const announcementSchema = z.object({
+  id: z.coerce.number().optional(),
+  title: z.string().min(1, { message: "Title is required!" }),
+  description: z.string().min(1, { message: "Description is required!" }),
+  date: z.string().min(1, { message: "Date is required" }),
+  classId: z.coerce.number().optional().nullable(),
+});
+
+export type AnnouncementSchema = z.infer<typeof announcementSchema>;
+
+export const assignmentSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    title: z
+      .string()
+      .min(1, { message: "Title is required!" })
+      .max(100, { message: "Title must be less than 100 characters!" }),
+    startDate: z
+      .string()
+      .min(1, { message: "Start date is required!" })
+      .refine(
+        (date) => {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        },
+        { message: "Invalid start date format!" }
+      ),
+    dueDate: z
+      .string()
+      .min(1, { message: "Due date is required!" })
+      .refine(
+        (date) => {
+          const parsedDate = new Date(date);
+          return !isNaN(parsedDate.getTime());
+        },
+        { message: "Invalid due date format!" }
+      ),
+    lessonId: z.coerce.number().min(1, { message: "Lesson is required!" }),
+  })
+  .refine(
+    (data) => {
+      const startDate = new Date(data.startDate);
+      const dueDate = new Date(data.dueDate);
+      return dueDate >= startDate;
+    },
+    {
+      message: "Due date must be after or equal to start date!",
+      path: ["dueDate"],
+    }
+  );
+
+export type AssignmentSchema = z.infer<typeof assignmentSchema>;
+
+export const resultSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    score: z.coerce
+      .number()
+      .min(0, "Score must be at least 0")
+      .max(100, "Score cannot exceed 100"),
+    examId: z.coerce.number().optional().nullable(),
+    assignmentId: z.coerce.number().optional().nullable(),
+    studentId: z.string().min(1, "Student is required"),
+  })
+  .refine((data) => data.examId || data.assignmentId, {
+    message: "Either exam or assignment must be selected",
+    path: ["examId"],
+  });
+
+export type ResultSchema = z.infer<typeof resultSchema>;
+
+export const attendanceSchema = z.object({
+  id: z.number().optional(),
+  date: z
+    .string()
+    .min(1, "Date is required")
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+  present: z.coerce.boolean().refine((val) => typeof val === "boolean", {
+    message: "Present must be a valid boolean value",
+  }),
+  studentId: z.string().min(1, "Student is required"),
+  lessonId: z.coerce.number().min(1, "Lesson is required"),
+});
+
+export type AttendanceSchema = z.infer<typeof attendanceSchema>;
+export const teacherAttendanceSchema = z.object({
+  date: z
+    .string()
+    .min(1, "Date is required")
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+  lessonId: z.coerce.number().min(1, "Lesson is required"),
+  attendances: z
+    .array(
+      z.object({
+        studentId: z.string().min(1, "Student ID is required"),
+        present: z.boolean(),
+      })
+    )
+    .min(1, "At least one student must be selected"),
+});
+
+export type TeacherAttendanceSchema = z.infer<typeof teacherAttendanceSchema>;
+
+export const eventSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  classId: z.union([z.string().min(1), z.literal("")]).optional(), // if class is optional
+});
+
+export type EventSchema = z.infer<typeof eventSchema>;

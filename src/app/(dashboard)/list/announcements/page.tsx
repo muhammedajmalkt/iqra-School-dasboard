@@ -19,6 +19,7 @@ const AnnouncementListPage = async ({
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
 
+
   const columns = [
     {
       header: "Title",
@@ -43,6 +44,7 @@ const AnnouncementListPage = async ({
       : []),
   ];
 
+
   const renderRow = (item: AnnouncementList) => (
     <tr
       key={item.id}
@@ -66,10 +68,11 @@ const AnnouncementListPage = async ({
     </tr>
   );
 
+
   const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  // Build query object
+  // URL PARAMS CONDITION
   const query: Prisma.AnnouncementWhereInput = {};
 
   // Search condition
@@ -80,27 +83,43 @@ const AnnouncementListPage = async ({
     };
   }
 
-  // Role-based conditions
-  const roleConditions = {
-    teacher: { lessons: { some: { teacherId: currentUserId! } } },
-    student: { students: { some: { id: currentUserId! } } },
-    parent: { students: { some: { parentId: currentUserId! } } },
-  };
-
-  const roleCondition = roleConditions[role as keyof typeof roleConditions];
-
-  if (roleCondition) {
-    query.OR = [
-      { classId: null },
-      {
-        class: roleCondition,
-      },
-    ];
-  } else if (role === "admin") {
-    query.OR = [
-      { classId: null },
-      { class: { isNot: null } },
-    ];
+  // ROLE CONDITIONS
+  switch (role) {
+    case "admin":
+      // Admin can see all announcements - no additional filtering needed
+      break;
+    case "teacher":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            lessons: { some: { teacherId: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    case "student":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            students: { some: { id: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    case "parent":
+      query.OR = [
+        { classId: null }, // General announcements
+        {
+          class: {
+            students: { some: { parentId: currentUserId! } },
+          },
+        },
+      ];
+      break;
+    default:
+      break;
   }
 
 const [data, count] = await prisma.$transaction([

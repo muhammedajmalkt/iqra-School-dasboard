@@ -15,10 +15,11 @@ const EventListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-
   const { userId, sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
+
+  console.log("Auth info:", { userId, role, currentUserId });
 
   const columns = [
     {
@@ -96,7 +97,6 @@ const EventListPage = async ({
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.EventWhereInput = {};
 
   if (queryParams) {
@@ -113,57 +113,114 @@ const EventListPage = async ({
     }
   }
 
-  // ROLE CONDITIONS
+  console.log("Query params:", queryParams);
+  console.log("Search query:", query);
 
-  const roleConditions = {
-    teacher: { lessons: { some: { teacherId: currentUserId! } } },
-    student: { students: { some: { id: currentUserId! } } },
-    parent: { students: { some: { parentId: currentUserId! } } },
+  // ROLE CONDITIONS - Fixed the role conditions
+  let roleQuery: Prisma.EventWhereInput = {};
+
+  if (role && role !== "admin") {
+    const roleConditions = {
+      teacher: { 
+        class: { 
+          lessons: { 
+            some: { teacherId: currentUserId! } 
+          } 
+        } 
+      },
+      student: { 
+        class: { 
+          students: { 
+            some: { id: currentUserId! } 
+          } 
+        } 
+      },
+      parent: { 
+        class: { 
+          students: { 
+            some: { parentId: currentUserId! } 
+          } 
+        } 
+      },
+    };
+
+    roleQuery = {
+      OR: [
+        { classId: null }, // Events not associated with any class
+        roleConditions[role as keyof typeof roleConditions] || {},
+      ],
+    };
+  }
+
+  // Combine search query with role query
+  const finalQuery: Prisma.EventWhereInput = {
+    ...query,
+    ...roleQuery,
   };
 
-  query.OR = [
-    { classId: null },
-    {
-      class: roleConditions[role as keyof typeof roleConditions] || {},
-    },
-  ];
+  console.log("Final query:", JSON.stringify(finalQuery, null, 2));
 
-  const [data, count] = await prisma.$transaction([
-    prisma.event.findMany({
-      where: query,
-      include: {
-        class: true,
-      },
-      take: ITEM_PER_PAGE,
-      skip: ITEM_PER_PAGE * (p - 1),
-    }),
-    prisma.event.count({ where: query }),
-  ]);
+  try {
+    const [data, count] = await prisma.$transaction([
+      prisma.event.findMany({
+        where: finalQuery,
+        include: {
+          class: true,
+        },
+        take: ITEM_PER_PAGE,
+        skip: ITEM_PER_PAGE * (p - 1),
+        orderBy: {
+          startTime: 'asc' // Add ordering for better UX
+        }
+      }),
+      prisma.event.count({ where: finalQuery }),
+    ]);
 
-  return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      {/* TOP */}
-      <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Events</h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            {role === "admin" && <FormContainer table="event" type="create" />}
+    console.log("Fetched data:", data);
+    console.log("Total count:", count);
+    console.log("Items per page:", ITEM_PER_PAGE);
+    console.log("Current page:", p);
+
+    return (
+      <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+        {/* TOP */}
+        <div className="flex items-center justify-between">
+          <h1 className="hidden md:block text-lg font-semibold">All Events ({count})</h1>
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <TableSearch />
+            <div className="flex items-center gap-4 self-end">
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/filter.png" alt="" width={14} height={14} />
+              </button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
+                <Image src="/sort.png" alt="" width={14} height={14} />
+              </button>
+              {role === "admin" && <FormContainer table="event" type="create" />}
+            </div>
           </div>
         </div>
+        {/* LIST */}
+        {data.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No events found. {role !== "admin" && "You may not have access to view events, or there are no events in your classes."}
+          </div>
+        ) : (
+          <Table columns={columns} renderRow={renderRow} data={data} />
+        )}
+        {/* PAGINATION */}
+        {count > 0 && <Pagination page={p} count={count} />}
       </div>
-      {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
-      {/* PAGINATION */}
-      <Pagination page={p} count={count} />
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error("Error fetching events:", error);
+    return (
+      <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
+        <div className="text-center py-8 text-red-500">
+          Error loading events. Please check the console for details.
+        </div>
+      </div>
+    );
+  }
 };
 
 export default EventListPage;

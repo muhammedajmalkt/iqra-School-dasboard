@@ -1,10 +1,15 @@
 "use client";
 
 import {
+  deleteAnnouncement,
+  deleteAssignment,
+  deleteAttendance,
   deleteClass,
+  deleteEvent,
   deleteExam,
   deleteLesson,
   deleteParent,
+  deleteResult,
   deleteStudent,
   deleteSubject,
   deleteTeacher,
@@ -23,8 +28,9 @@ import {
 } from "react";
 import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
-import { useFormState } from "react-dom";
 import DeleteConfirmation from "./confirmModal";
+import FormLoadingSkeleton from "./FormLoadingSkeleton";
+import LoadingSpinner from "./LoadingSpinner";
 
 const deleteActionMap = {
   subject: deleteSubject,
@@ -34,34 +40,72 @@ const deleteActionMap = {
   exam: deleteExam,
   parent: deleteParent,
   lesson: deleteLesson,
-  assignment: deleteSubject,
-  result: deleteSubject,
-  attendance: deleteSubject,
-  event: deleteSubject,
-  announcement: deleteSubject,
+  assignment: deleteAssignment,
+  result: deleteResult,
+  attendance: deleteAttendance,
+  event: deleteEvent,
+  announcement: deleteAnnouncement,
+  teacherAttendance: deleteAnnouncement,
 };
 
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="teacher" />,
+  ssr: false,
 });
 const StudentForm = dynamic(() => import("./forms/StudentForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="student" />,
+  ssr: false,
 });
 const SubjectForm = dynamic(() => import("./forms/SubjectForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="subject" />,
+  ssr: false,
 });
 const ClassForm = dynamic(() => import("./forms/ClassForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="class" />,
+  ssr: false,
 });
 const ExamForm = dynamic(() => import("./forms/ExamForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="exam" />,
+  ssr: false,
 });
 const ParentForm = dynamic(() => import("./forms/ParentForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="parent" />,
+  ssr: false,
 });
 const LessonForm = dynamic(() => import("./forms/LessonForm"), {
-  loading: () => <h1>Loading...</h1>,
+  loading: () => <FormLoadingSkeleton formType="lesson" />,
+  ssr: false,
 });
+const AnnouncementForm = dynamic(() => import("./forms/AnnouncementForm"), {
+  loading: () => <FormLoadingSkeleton formType="announcement" />,
+  ssr: false,
+});
+const AssignmentForm = dynamic(() => import("./forms/AssignmentForm"), {
+  loading: () => <FormLoadingSkeleton formType="assignment" />,
+  ssr: false,
+});
+const ResultForm = dynamic(() => import("./forms/ResultForm"), {
+  loading: () => <FormLoadingSkeleton formType="result" />,
+  ssr: false,
+});
+const AttendanceForm = dynamic(() => import("./forms/AttendanceForm"), {
+  loading: () => <FormLoadingSkeleton formType="attendance" />,
+  ssr: false,
+});
+const TeacherAttendanceForm = dynamic(
+  () => import("./forms/TeacherAttendanceForm"),
+  {
+    loading: () => <FormLoadingSkeleton formType="attendance" />,
+    ssr: false,
+  }
+);
+const EventForm = dynamic(
+  () => import("./forms/EventForm"),
+  {
+    loading: () => <FormLoadingSkeleton formType="event" />,
+    ssr: false,
+  }
+);
 
 const forms: {
   [key: string]: (
@@ -127,6 +171,54 @@ const forms: {
       relatedData={relatedData}
     />
   ),
+  announcement: (setOpen, type, data, relatedData) => (
+    <AnnouncementForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  assignment: (setOpen, type, data, relatedData) => (
+    <AssignmentForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  result: (setOpen, type, data, relatedData) => (
+    <ResultForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  attendance: (setOpen, type, data, relatedData) => (
+    <AttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  teacherAttendance: (setOpen, type, data, relatedData) => (
+    <TeacherAttendanceForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
+  event: (setOpen, type, data, relatedData) => (
+    <EventForm
+      type={type}
+      data={data}
+      setOpen={setOpen}
+      relatedData={relatedData}
+    />
+  ),
 };
 
 const FormModal = ({
@@ -145,6 +237,7 @@ const FormModal = ({
       : "bg-lamaPurple";
 
   const [open, setOpen] = useState(false);
+  const [isFormLoading, setIsFormLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -192,11 +285,33 @@ const FormModal = ({
       return FormComponent ? (
         FormComponent(setOpen, type, data, relatedData)
       ) : (
-        <p>Form not found!</p>
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="w-16 h-16 mb-4 text-gray-400">
+            <svg fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+          </div>
+          <p className="text-gray-600 font-medium">Form not available</p>
+          <p className="text-gray-500 text-sm mt-1">
+            The requested form could not be loaded
+          </p>
+        </div>
       );
     }
 
-    return <p>Invalid form type!</p>;
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <div className="w-16 h-16 mb-4 text-red-400">
+          <svg fill="currentColor" viewBox="0 0 24 24">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+          </svg>
+        </div>
+        <p className="text-red-600 font-medium">Invalid form type</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Please check the form configuration
+        </p>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -215,17 +330,28 @@ const FormModal = ({
     };
   }, [open]);
 
+  // Handle form loading state
+  const handleModalOpen = () => {
+    setOpen(true);
+    setIsFormLoading(true);
+  };
+
   return (
     <>
       <button
-        className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-90 transition`}
-        onClick={() => setOpen(true)}
+        className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-90 transition-all duration-200 hover:scale-105 active:scale-95`}
+        onClick={handleModalOpen}
+        disabled={open}
       >
-        <Image src={`/${type}.png`} alt={type} width={16} height={16} />
+        {open && isFormLoading ? (
+          <LoadingSpinner size="sm" />
+        ) : (
+          <Image src={`/${type}.png`} alt={type} width={16} height={16} />
+        )}
       </button>
 
       {open && (
-        <div className="w-full fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center overflow-y-scroll">
+        <div className="w-full fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center overflow-y-scroll scrollbar-hide">
           <div
             ref={modalRef}
             className="relative bg-white p-6 rounded-xl shadow-lg w-[90%] max-w-2xl animate-fadeIn"
