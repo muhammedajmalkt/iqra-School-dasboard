@@ -15,17 +15,28 @@ import { auth } from "@clerk/nextjs/server";
 type StudentList = Student & { class: Class };
 
 // COMPONENT
-const StudentListPage = async ({ searchParams, }: { searchParams: { [key: string]: string | undefined }; }) => {
-
-  const { sessionClaims } = await auth();
-const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+const StudentListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const { sessionClaims, userId } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
   const columns = [
     { header: "Info", accessor: "info" },
-    { header: "Student ID", accessor: "studentId", className: "hidden md:table-cell" },
+    {
+      header: "Student ID",
+      accessor: "studentId",
+      className: "hidden md:table-cell",
+    },
     { header: "Grade", accessor: "grade", className: "hidden md:table-cell" },
     { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
-    { header: "Address", accessor: "address", className: "hidden lg:table-cell" },
+    {
+      header: "Address",
+      accessor: "address",
+      className: "hidden lg:table-cell",
+    },
     ...(role === "admin" ? [{ header: "Actions", accessor: "action" }] : []),
   ];
 
@@ -60,8 +71,8 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
           </Link>
           {role === "admin" && (
             <>
-            <FormContainer table="student" type="update" data={item} />
-            <FormContainer table="student" type="delete" id={item.id} />
+              <FormContainer table="student" type="update" data={item} />
+              <FormContainer table="student" type="delete" id={item.id} />
             </>
           )}
         </div>
@@ -74,23 +85,45 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
   const query: Prisma.StudentWhereInput = {};
 
+  // Role-based filtering - if teacher, only show their students
+  if (role === "teacher") {
+    query.class = {
+      supervisorId: userId, // Use the current teacher's ID as supervisor
+    };
+  }
+
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
       switch (key) {
         case "teacherId":
-          query.class = {
-            lessons: {
-              some: {
-                teacherId: value,
-              },
-            },
-          };
+          // Only allow teacherId filter for admins
+          if (role === "admin") {
+            query.class = {
+              supervisorId: value,
+            };
+          }
           break;
         case "search":
           query.name = { contains: value, mode: "insensitive" };
           break;
         case "classId":
-          query.classId = Number(value);
+          // For teachers, ensure the class filter is combined with their teaching constraint
+          if (role === "teacher") {
+            query.AND = [
+              {
+                class: {
+                  supervisorId: userId,
+                },
+              },
+              {
+                classId: Number(value),
+              },
+            ];
+            // Remove the base teacher constraint since it's now in AND
+            delete query.class;
+          } else {
+            query.classId = Number(value);
+          }
           break;
         default:
           break;
@@ -130,7 +163,14 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     prisma.student.count({ where: query }),
   ]);
 
-  const classes = await prisma.class.findMany();
+  // For teachers, only get classes they supervise for the filter dropdown
+  const classes = role === "teacher" 
+    ? await prisma.class.findMany({
+        where: {
+          supervisorId: userId,
+        },
+      })
+    : await prisma.class.findMany();
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -149,16 +189,17 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     { value: "created_desc", label: "Newest First" },
   ];
 
-    
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">All Students</h1>
+        <h1 className="hidden md:block text-lg font-semibold">
+          {role === "teacher" ? "My Students" : "All Students"}
+        </h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch  />
+          <TableSearch />
           <div className="flex items-center gap-4 self-end">
-         {/* Sort Dropdown */}
+            {/* Sort Dropdown */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
                 <Image src="/sort.png" alt="Sort" width={14} height={14} />
@@ -184,52 +225,56 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
                 </div>
               </div>
             </div>
-            {/* Filter Dropdown */}
-            <div className="relative group">
-              <button
-                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                  queryParams.classId
-                    ? "bg-blue-500 text-white"
-                    : "bg-lamaYellow hover:bg-yellow-400"
-                }`}
-              >
-                <Image src="/filter.png" alt="Filter" width={14} height={14} />
-              </button>
-              <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="py-1">
-                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
-                    Filter by Class
-                  </div>
-                  <Link
-                    href={`/list/students`}
-                    className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                      !queryParams.classId ? "bg-blue-50 text-blue-600" : ""
-                    }`}
-                  >
-                    All Classes
-                  </Link>
-                  {classes.map((classItem) => (
+            {/* Filter Dropdown - Only show if there are classes to filter by */}
+            {classes.length > 0 && (
+              <div className="relative group">
+                <button
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    queryParams.classId
+                      ? "bg-blue-500 text-white"
+                      : "bg-lamaYellow hover:bg-yellow-400"
+                  }`}
+                >
+                  <Image src="/filter.png" alt="Filter" width={14} height={14} />
+                </button>
+                <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                      Filter by Class
+                    </div>
                     <Link
-                      key={classItem.id}
-                      href={`/list/students?${getQueryString({
-                        ...queryParams,
-                        classId: classItem.id.toString(),
-                      })}`}
+                      href={`/list/students`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        queryParams.classId === classItem.id.toString()
-                          ? "bg-blue-50 text-blue-600"
-                          : ""
+                        !queryParams.classId ? "bg-blue-50 text-blue-600" : ""
                       }`}
                     >
-                      {classItem.name}
+                      {role === "teacher" ? "All My Classes" : "All Classes"}
                     </Link>
-                  ))}
+                    {classes.map((classItem) => (
+                      <Link
+                        key={classItem.id}
+                        href={`/list/students?${getQueryString({
+                          ...queryParams,
+                          classId: classItem.id.toString(),
+                        })}`}
+                        className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                          queryParams.classId === classItem.id.toString()
+                            ? "bg-blue-50 text-blue-600"
+                            : ""
+                        }`}
+                      >
+                        {classItem.name}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Add Button */}
-            {role === "admin" && <FormContainer table="student" type="create" />}
+            {/* Add Button - Only for admins */}
+            {role === "admin" && (
+              <FormContainer table="student" type="create" />
+            )}
           </div>
         </div>
       </div>
@@ -239,11 +284,17 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
         <div className="flex items-center gap-2 mt-4 mb-4">
           <span className="text-sm text-gray-500">Active filters:</span>
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-            Class: {classes.find((c) => c.id.toString() === queryParams.classId)?.name}
+            Class:{" "}
+            {classes.find((c) => c.id.toString() === queryParams.classId)?.name}
             <Link
-              href={`/list/students?${getQueryString({ ...queryParams, classId: undefined })}`}
+              href={`/list/students?${getQueryString({
+                ...queryParams,
+                classId: undefined,
+              })}`}
             >
-              <button className="ml-1 text-purple-600 hover:text-purple-800">×</button>
+              <button className="ml-1 text-purple-600 hover:text-purple-800">
+                ×
+              </button>
             </Link>
           </span>
           <Link
