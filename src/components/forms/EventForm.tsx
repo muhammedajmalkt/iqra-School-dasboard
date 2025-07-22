@@ -21,13 +21,33 @@ const EventForm = ({
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
+  // Helper function to format DateTime to datetime-local input format
+  const formatDateTimeLocal = (date: Date | string) => {
+    if (!date) return "";
+    
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) return "";
+    
+    // Format as YYYY-MM-DDTHH:mm (datetime-local format)
+    return dateObj.toISOString().slice(0, 16);
+  };
+
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<EventSchema>({
     resolver: zodResolver(eventSchema),
+    defaultValues: {
+      title: data?.title || "",
+      description: data?.description || "",
+      startTime: formatDateTimeLocal(data?.startTime),
+      endTime: formatDateTimeLocal(data?.endTime),
+      classId: data?.classId?.toString() || "",
+      ...(data?.id && { id: data.id }),
+    },
   });
 
   const [state, formAction] = useActionState(
@@ -45,82 +65,91 @@ const EventForm = ({
   });
 
   useEffect(() => {
-    if (type === "update" && data) {
-      setValue("title", data.title);
-      setValue("description", data.description);
-      setValue("startTime", data.startTime?.slice(0, 16)); // for datetime-local
-      setValue("endTime", data.endTime?.slice(0, 16));
-      setValue("classId", data.classId?.toString() || "");
-      if (data.id) setValue("id", data.id);
-    }
-  }, [data, setValue, type]);
-
-  useEffect(() => {
     if (state.success) {
-      toast(`Event ${type === "create" ? "created" : "updated"} successfully`);
+      toast(`Event ${type === "create" ? "created" : "updated"} successfully!`);
       setOpen(false);
       router.refresh();
     }
   }, [state, type, setOpen, router]);
 
+  const { classes } = relatedData || {};
+
   return (
-    <form className="flex flex-col gap-6" onSubmit={onSubmit}>
+    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create Event" : "Update Event"}
+        {type === "create" ? "Create a new event" : "Update the event"}
       </h1>
-
-      <InputField
-        label="Title"
-        name="title"
-        defaultValue={data?.title}
-        register={register}
-        error={errors.title}
-      />
-      <InputField
-        label="Description"
-        name="description"
-        defaultValue={data?.description}
-        register={register}
-        error={errors.description}
-      />
-      <InputField
-        label="Start Time"
-        name="startTime"
-        type="datetime-local"
-        register={register}
-        error={errors.startTime}
-      />
-      <InputField
-        label="End Time"
-        name="endTime"
-        type="datetime-local"
-        register={register}
-        error={errors.endTime}
-      />
-      <InputField
-        label="Class ID"
-        name="classId"
-        defaultValue={data?.classId || ""}
-        register={register}
-        error={errors.classId}
-      />
-
-      {data && (
+      
+      <span className="text-xs text-gray-400 font-medium">
+        Event Information
+      </span>
+      
+      <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          name="id"
-          defaultValue={data?.id}
+          label="Title"
+          name="title"
           register={register}
-          error={errors?.id}
-          hidden
-          label=""
+          error={errors.title}
         />
+        <InputField
+          label="Description"
+          name="description"
+          register={register}
+          error={errors.description}
+        />
+        <InputField
+          label="Start Time"
+          name="startTime"
+          type="datetime-local"
+          register={register}
+          error={errors.startTime}
+        />
+        <InputField
+          label="End Time"
+          name="endTime"
+          type="datetime-local"
+          register={register}
+          error={errors.endTime}
+        />
+        
+        <div className="flex flex-col gap-2 w-full md:w-1/4">
+          <label className="text-xs text-gray-500">Class</label>
+          <select
+            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
+            {...register("classId")}
+          >
+            <option value="">Choose a class...</option>
+            {classes?.map((cls: any) => (
+              <option key={cls.id} value={cls.id.toString()}>
+                {cls.name} - {cls.grade} {cls.section ? `(${cls.section})` : ''}
+              </option>
+            ))}
+          </select>
+          {errors.classId?.message && (
+            <p className="text-xs text-red-400">
+              {errors.classId.message.toString()}
+            </p>
+          )}
+        </div>
+
+        {data?.id && (
+          <InputField
+            label="Id"
+            name="id"
+            register={register}
+            error={errors?.id}
+            hidden
+          />
+        )}
+      </div>
+      
+      {state.error && state.errorMessage && (
+        <span className="text-red-500">{state.errorMessage}</span>
       )}
-
-      {state.error && <span className="text-red-500">{state.errorMessage}</span>}
-
+      
       <button
-        className="bg-blue-500 text-white py-2 rounded-md disabled:bg-gray-400"
         type="submit"
+        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
         disabled={isPending}
       >
         {isPending
