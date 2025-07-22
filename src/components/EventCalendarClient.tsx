@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Calendar from "react-calendar";
+import Calendar, { CalendarProps } from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 type Props = {
@@ -10,15 +10,17 @@ type Props = {
 };
 
 const EventCalendarClient = ({ selectedDate, onChange }: Props) => {
-  const [value, setValue] = useState<Date | null>(null);
+  const [value, setValue] = useState<CalendarProps["value"]>(null);
 
   useEffect(() => {
     setValue(selectedDate ?? new Date());
   }, [selectedDate]);
 
-  const handleChange = (date: Date) => {
-    setValue(date);
-    if (onChange) onChange(date);
+  const handleChange: CalendarProps["onChange"] = (date) => {
+    if (date instanceof Date) {
+      setValue(date);
+      onChange?.(date);
+    }
   };
 
   if (!value) {

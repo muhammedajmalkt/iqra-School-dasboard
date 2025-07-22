@@ -14,12 +14,14 @@ type AnnouncementList = Announcement & { class: Class };
 const AnnouncementListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  // Await the searchParams Promise
+  const resolvedSearchParams = await searchParams;
+  
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
-
 
   const columns = [
     {
@@ -45,7 +47,6 @@ const AnnouncementListPage = async ({
       : []),
   ];
 
-
   const renderRow = (item: AnnouncementList) => (
     <tr
       key={item.id}
@@ -69,8 +70,7 @@ const AnnouncementListPage = async ({
     </tr>
   );
 
-
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
@@ -122,9 +122,10 @@ const AnnouncementListPage = async ({
     default:
       break;
   }
-    // Handle sorting
+
+  // Handle sorting
   const currentSort = queryParams.sort || "created_desc";
-  const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
+  const orderBy: Prisma.AnnouncementOrderByWithRelationInput = (() => {
     switch (currentSort) {
       case "name_asc":
         return { title: "asc" };
@@ -135,13 +136,16 @@ const AnnouncementListPage = async ({
     }
   })();
 
-const [data, count] = await prisma.$transaction([
-  prisma.announcement.findMany({
-    orderBy,
-    include: { class: true },
-  }),
-  prisma.announcement.count(),
-]);
+  const [data, count] = await prisma.$transaction([
+    prisma.announcement.findMany({
+      where: query,
+      orderBy,
+      include: { class: true },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (p - 1),
+    }),
+    prisma.announcement.count({ where: query }),
+  ]);
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -166,7 +170,6 @@ const [data, count] = await prisma.$transaction([
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-
             {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">

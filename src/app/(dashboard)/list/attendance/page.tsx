@@ -19,12 +19,14 @@ type AttendanceList = Attendance & {
 const AttendanceListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  const resolvedSearchParams = await searchParams;
+
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.AttendanceWhereInput = {};
@@ -106,33 +108,34 @@ const AttendanceListPage = async ({
       ? "date_desc"
       : "present_desc");
 
-  const orderBy: Prisma.AttendanceOrderByWithRelationInput = (() => {
-    switch (currentSort) {
-      case "date_asc":
-        return { date: "asc" };
-      case "date_desc":
-        return { date: "desc" };
-      case "student_asc":
-        return { student: { name: "asc" } };
-      case "student_desc":
-        return { student: { name: "desc" } };
-      case "lesson_asc":
-        return { lesson: { name: "asc" } };
-      case "lesson_desc":
-        return { lesson: { name: "desc" } };
-      case "present_asc":
-        return [{ present: "asc" }, { student: { name: "asc" } }];
-      case "present_desc":
-        return [{ present: "desc" }, { student: { name: "asc" } }];
-      default:
-        return showAllRecords ||
-          queryParams.search ||
-          queryParams.present ||
-          queryParams.lessonId
-          ? { date: "desc" }
-          : [{ present: "desc" }, { student: { name: "asc" } }];
-    }
-  })();
+ const orderBy: Prisma.Enumerable<Prisma.AttendanceOrderByWithRelationInput> = (() => {
+  switch (currentSort) {
+    case "date_asc":
+      return { date: "asc" };
+    case "date_desc":
+      return { date: "desc" };
+    case "student_asc":
+      return { student: { name: "asc" } };
+    case "student_desc":
+      return { student: { name: "desc" } };
+    case "lesson_asc":
+      return { lesson: { name: "asc" } };
+    case "lesson_desc":
+      return { lesson: { name: "desc" } };
+    case "present_asc":
+      return [{ present: "asc" }, { student: { name: "asc" } }];
+    case "present_desc":
+      return [{ present: "desc" }, { student: { name: "asc" } }];
+    default:
+      return showAllRecords ||
+        queryParams.search ||
+        queryParams.present ||
+        queryParams.lessonId
+        ? { date: "desc" }
+        : [{ present: "desc" }, { student: { name: "asc" } }];
+  }
+})();
+
 
   const [data, count] = await prisma.$transaction([
     prisma.attendance.findMany({
@@ -370,7 +373,7 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Today's Attendance
+                        📅 Today&apos;s Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
@@ -388,7 +391,7 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Yesterday's Attendance
+                        📅 Yesterday&apos;s Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({

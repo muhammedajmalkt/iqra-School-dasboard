@@ -1,5 +1,3 @@
-
-
 // AdminPage.tsx (Server Component)
 import Announcements from "@/components/Announcements";
 import AttendanceChartContainer from "@/components/AttendanceChartContainer";
@@ -9,10 +7,13 @@ import FinanceChart from "@/components/FinanceChart";
 import UserCard from "@/components/UserCard";
 
 type Props = {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 };
 
-const AdminPage = ({ searchParams }: Props) => {
+const AdminPage = async ({ searchParams }: Props) => {
+  // Await the searchParams Promise
+  const resolvedSearchParams = await searchParams;
+
   return (
     <div className="p-4 flex gap-4 flex-col md:flex-row">
       {/* LEFT */}
@@ -43,7 +44,7 @@ const AdminPage = ({ searchParams }: Props) => {
 
       {/* RIGHT */}
       <div className="w-full lg:w-1/3 flex flex-col gap-8">
-        <EventCalendarContainer searchParams={searchParams} />
+        <EventCalendarContainer searchParams={resolvedSearchParams} />
         <Announcements />
       </div>
     </div>

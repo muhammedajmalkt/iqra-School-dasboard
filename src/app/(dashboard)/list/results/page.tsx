@@ -25,7 +25,7 @@ type ResultList = {
 const ResultListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
@@ -99,7 +99,9 @@ const ResultListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const resolvedSearchParams = await searchParams;
+
+  const { page, ...queryParams } = resolvedSearchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -150,7 +152,7 @@ const ResultListPage = async ({
       break;
   }
 
-    // Handle sorting
+  // Handle sorting
   const currentSort = queryParams.sort || "studentId_asc";
   const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
     switch (currentSort) {
@@ -218,7 +220,7 @@ const ResultListPage = async ({
     })
     .filter((item): item is ResultList => item !== null); // Remove null values and type assertion
 
-      const getQueryString = (params: Record<string, string | undefined>) => {
+  const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value) query.set(key, value);
@@ -238,7 +240,6 @@ const ResultListPage = async ({
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-
             {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
@@ -254,7 +255,9 @@ const ResultListPage = async ({
                         sort: option.value,
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        currentSort === option.value ? "bg-blue-50 text-blue-600" : ""
+                        currentSort === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       {option.label}
@@ -273,7 +276,7 @@ const ResultListPage = async ({
                 <p className="text-xs px-2 py-1">No filters yet</p>
               </div>
             </div>
-            
+
             {(role === "admin" || role === "teacher") && (
               <FormContainer table="result" type="create" />
             )}

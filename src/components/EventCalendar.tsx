@@ -1,9 +1,9 @@
 'use client';
 import { useState } from "react";
-import Calendar from "react-calendar";
+import Calendar, { CalendarProps } from "react-calendar";
 
 const EventCalendar = () => {
-  const [value, setValue] = useState<Date>(new Date());
+  const [value, setValue] = useState<CalendarProps["value"]>(new Date());
 
   return (
     <Calendar

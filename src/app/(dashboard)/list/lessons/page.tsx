@@ -13,65 +13,63 @@ type LessonList = Lesson & { subject: Subject } & { class: Class } & {
   teacher: Teacher;
 };
 
-
 const LessonListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
-const { sessionClaims } = await auth();
-const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+  const columns = [
+    {
+      header: "Subject Name",
+      accessor: "name",
+    },
+    {
+      header: "Class",
+      accessor: "class",
+    },
+    {
+      header: "Teacher",
+      accessor: "teacher",
+      className: "hidden md:table-cell",
+    },
+    ...(role === "admin"
+      ? [
+          {
+            header: "Actions",
+            accessor: "action",
+          },
+        ]
+      : []),
+  ];
 
+  const renderRow = (item: LessonList) => (
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
+      <td className="flex items-center gap-4 p-4">{item.subject.name}</td>
+      <td>{item.class.name}</td>
+      <td className="hidden md:table-cell">
+        {item.teacher.name + " " + item.teacher.surname}
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          {role === "admin" && (
+            <>
+              <FormContainer table="lesson" type="update" data={item} />
+              <FormContainer table="lesson" type="delete" id={item.id} />
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+  const resolvedSearchParams = await searchParams;
 
-const columns = [
-  {
-    header: "Subject Name",
-    accessor: "name",
-  },
-  {
-    header: "Class",
-    accessor: "class",
-  },
-  {
-    header: "Teacher",
-    accessor: "teacher",
-    className: "hidden md:table-cell",
-  },
-  ...(role === "admin"
-    ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-    : []),
-];
-
-const renderRow = (item: LessonList) => (
-  <tr
-    key={item.id}
-    className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-  >
-    <td className="flex items-center gap-4 p-4">{item.subject.name}</td>
-    <td>{item.class.name}</td>
-    <td className="hidden md:table-cell">
-      {item.teacher.name + " " + item.teacher.surname}
-    </td>
-    <td>
-      <div className="flex items-center gap-2">
-        {role === "admin" && (
-          <>
-            <FormContainer table="lesson" type="update" data={item} />
-            <FormContainer table="lesson" type="delete" id={item.id} />
-          </>
-        )}
-      </div>
-    </td>
-  </tr>
-);
-
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -101,7 +99,7 @@ const renderRow = (item: LessonList) => (
       }
     }
   }
-   // Handle sorting
+  // Handle sorting
   const currentSort = queryParams.sort || "name_asc";
   const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
     switch (currentSort) {
@@ -129,7 +127,7 @@ const renderRow = (item: LessonList) => (
     prisma.lesson.count({ where: query }),
   ]);
 
-    const getQueryString = (params: Record<string, string | undefined>) => {
+  const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value) query.set(key, value);
@@ -139,7 +137,6 @@ const renderRow = (item: LessonList) => (
   const sortOptions = [
     { value: "name_asc", label: "Name A-Z" },
     { value: "name_desc", label: "Name Z-A" },
-
   ];
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
@@ -149,7 +146,7 @@ const renderRow = (item: LessonList) => (
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-              {/* SORT BUTTON */}
+            {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
                 <Image src="/sort.png" alt="Sort" width={14} height={14} />
@@ -164,7 +161,9 @@ const renderRow = (item: LessonList) => (
                         sort: option.value,
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        currentSort === option.value ? "bg-blue-50 text-blue-600" : ""
+                        currentSort === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       {option.label}

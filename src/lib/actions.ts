@@ -37,7 +37,7 @@ export const createTeacher = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      email_addresses: data.email ? [data.email] : [],
+      emailAddress: data.email ? [data.email] : [],
       publicMetadata: { role: "teacher" },
     });
 
@@ -239,7 +239,7 @@ export const createParent = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      email_addresses: data.email ? [data.email] : [],
+      emailAddress: data.email ? [data.email] : [],
       publicMetadata: { role: "parent" },
     });
 
@@ -381,7 +381,7 @@ export const createStudent = async (
       password: data.password,
       firstName: data.name,
       lastName: data.surname,
-      email_addresses: data.email ? [data.email] : [],
+      emailAddress: data.email ? [data.email] : [],
       publicMetadata: { role: "student" },
     });
 

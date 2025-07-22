@@ -18,7 +18,7 @@ type StudentList = Student & { class: Class };
 const StudentListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { sessionClaims, userId } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
@@ -80,7 +80,10 @@ const StudentListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+   const resolvedSearchParams = await searchParams;
+
+  const { page, ...queryParams } = resolvedSearchParams;
+
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.StudentWhereInput = {};
