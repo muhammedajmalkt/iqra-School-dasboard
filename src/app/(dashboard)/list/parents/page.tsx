@@ -24,7 +24,7 @@ const ParentListPage = async ({
   const resolvedSearchParams = await searchParams;
 
   const { page, ...queryParams } = resolvedSearchParams;
-
+  
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.ParentWhereInput = {};

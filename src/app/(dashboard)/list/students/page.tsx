@@ -9,7 +9,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
+import { auth} from "@clerk/nextjs/server";
 
 // TYPES
 type StudentList = Student & { class: Class };
@@ -80,10 +80,9 @@ const StudentListPage = async ({
     </tr>
   );
 
-  const resolvedSearchParams = await searchParams;
+   const resolvedSearchParams = await searchParams;
 
   const { page, ...queryParams } = resolvedSearchParams;
-
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.StudentWhereInput = {};
@@ -166,15 +165,7 @@ const StudentListPage = async ({
     prisma.student.count({ where: query }),
   ]);
 
-  // For teachers, only get classes they supervise for the filter dropdown
-  const classes =
-    role === "teacher"
-      ? await prisma.class.findMany({
-          where: {
-            supervisorId: userId,
-          },
-        })
-      : await prisma.class.findMany();
+  const classes = await prisma.class.findMany();
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -193,6 +184,7 @@ const StudentListPage = async ({
     { value: "created_desc", label: "Newest First" },
   ];
 
+    
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
@@ -229,60 +221,52 @@ const StudentListPage = async ({
                 </div>
               </div>
             </div>
-            {/* Filter Dropdown - Only show if there are classes to filter by */}
-            {classes.length > 0 && (
-              <div className="relative group">
-                <button
-                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                    queryParams.classId
-                      ? "bg-blue-500 text-white"
-                      : "bg-lamaYellow hover:bg-yellow-400"
-                  }`}
-                >
-                  <Image
-                    src="/filter.png"
-                    alt="Filter"
-                    width={14}
-                    height={14}
-                  />
-                </button>
-                <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <div className="py-1">
-                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
-                      Filter by Class
-                    </div>
+            {/* Filter Dropdown */}
+            <div className="relative group">
+              <button
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                  queryParams.classId
+                    ? "bg-blue-500 text-white"
+                    : "bg-lamaYellow hover:bg-yellow-400"
+                }`}
+              >
+                <Image src="/filter.png" alt="Filter" width={14} height={14} />
+              </button>
+              <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="py-1">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">
+                    Filter by Class
+                  </div>
+                  <Link
+                    href={`/list/students`}
+                    className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                      !queryParams.classId ? "bg-blue-50 text-blue-600" : ""
+                    }`}
+                  >
+                    All Classes
+                  </Link>
+                  {classes.map((classItem) => (
                     <Link
-                      href={`/list/students`}
+                      key={classItem.id}
+                      href={`/list/students?${getQueryString({
+                        ...queryParams,
+                        classId: classItem.id.toString(),
+                      })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        !queryParams.classId ? "bg-blue-50 text-blue-600" : ""
+                        queryParams.classId === classItem.id.toString()
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
-                      {role === "teacher" ? "All My Classes" : "All Classes"}
+                      {classItem.name}
                     </Link>
-                    {classes.map((classItem) => (
-                      <Link
-                        key={classItem.id}
-                        href={`/list/students?${getQueryString({
-                          ...queryParams,
-                          classId: classItem.id.toString(),
-                        })}`}
-                        className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                          queryParams.classId === classItem.id.toString()
-                            ? "bg-blue-50 text-blue-600"
-                            : ""
-                        }`}
-                      >
-                        {classItem.name}
-                      </Link>
-                    ))}
-                  </div>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
 
-            {(role === "admin" || role === "teacher") && (
-              <FormContainer table="student" type="create" />
-            )}
+            {/* Add Button */}
+            {role === "admin" && <FormContainer table="student" type="create" />}
           </div>
         </div>
       </div>
