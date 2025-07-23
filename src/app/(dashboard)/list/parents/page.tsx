@@ -21,10 +21,10 @@ const ParentListPage = async ({
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
-   const resolvedSearchParams = await searchParams;
+  const resolvedSearchParams = await searchParams;
 
   const { page, ...queryParams } = resolvedSearchParams;
-
+  
   const p = page ? parseInt(page) : 1;
 
   const query: Prisma.ParentWhereInput = {};
@@ -73,9 +73,17 @@ const ParentListPage = async ({
 
   const columns = [
     { header: "Info", accessor: "info" },
-    { header: "Student Names", accessor: "students", className: "hidden md:table-cell" },
+    {
+      header: "Student Names",
+      accessor: "students",
+      className: "hidden md:table-cell",
+    },
     { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
-    { header: "Address", accessor: "address", className: "hidden lg:table-cell" },
+    {
+      header: "Address",
+      accessor: "address",
+      className: "hidden lg:table-cell",
+    },
     ...(role === "admin" ? [{ header: "Actions", accessor: "action" }] : []),
   ];
 
@@ -97,7 +105,7 @@ const ParentListPage = async ({
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
+          {(role === "admin" || role === "teacher") && (
             <>
               <FormContainer table="parent" type="update" data={item} />
               <FormContainer table="parent" type="delete" id={item.id} />
@@ -146,7 +154,9 @@ const ParentListPage = async ({
                         sort: option.value,
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        currentSort === option.value ? "bg-blue-50 text-blue-600" : ""
+                        currentSort === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       {option.label}
@@ -166,7 +176,9 @@ const ParentListPage = async ({
               </div>
             </div>
 
-            {role === "admin" && <FormContainer table="parent" type="create" />}
+            {(role === "admin" || role === "teacher") && (
+              <FormContainer table="parent" type="create" />
+            )}
           </div>
         </div>
       </div>

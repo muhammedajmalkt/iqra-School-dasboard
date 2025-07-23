@@ -154,6 +154,7 @@ export const createErrorMessage = (
     const clerkError = err as ClerkError;
     const firstError = clerkError.errors[0];
 
+<<<<<<< HEAD
     if (firstError && typeof firstError === "object" && "code" in firstError) {
       const errorCode = (firstError as any).code;
       switch (errorCode) {
@@ -308,6 +309,9 @@ export const createErrorMessage = (
     } else {
       errorMessage = firstError?.message || errorMessage;
     }
+=======
+    errorMessage = firstError?.message || errorMessage;
+>>>>>>> main
   } else if (
     typeof err === "object" &&
     err !== null &&
