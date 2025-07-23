@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "./prisma";
-import { clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import {
   EventSchema,
   teacherAttendanceSchema,
@@ -783,7 +783,9 @@ export const createAnnouncement = async (
   data: AnnouncementSchema
 ): Promise<CurrentState> => {
   try {
-    await prisma.announcement.create({
+    const { userId } = await auth();
+
+    const result = await prisma.announcement.create({
       data: {
         title: data.title,
         description: data.description,
@@ -791,7 +793,11 @@ export const createAnnouncement = async (
         classId: data.classId || null,
       },
     });
-
+    try {
+      await markAnnouncementAsViewed(userId!, result.id);
+    } catch (error) {
+      throw error;
+    }
     return { success: true, error: false };
   } catch (err: any) {
     console.log(err);
@@ -875,7 +881,6 @@ export const createAssignment = async (
         lessonId: data.lessonId,
       },
     });
-
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Create assignment error:", err);
@@ -1179,3 +1184,38 @@ export const deleteEvent = async (
     };
   }
 };
+
+export async function markAnnouncementAsViewed(
+  userId: string,
+  announcementId: number
+): Promise<void> {
+  await prisma.announcementView.upsert({
+    where: {
+      userId_announcementId: {
+        userId,
+        announcementId,
+      },
+    },
+    create: {
+      userId,
+      announcementId,
+    },
+    update: {
+      viewedAt: new Date(),
+    },
+  });
+}
+
+export async function markMultipleAnnouncementsAsViewed(
+  userId: string,
+  announcementIds: number[]
+): Promise<void> {
+  // Use createMany with skipDuplicates to handle bulk insertion
+  await prisma.announcementView.createMany({
+    data: announcementIds.map((announcementId) => ({
+      userId,
+      announcementId,
+    })),
+    skipDuplicates: true,
+  });
+}

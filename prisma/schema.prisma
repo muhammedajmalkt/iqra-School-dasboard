@@ -163,6 +163,18 @@ model Event {
   class       Class?   @relation(fields: [classId], references: [id])
 }
 
+model AnnouncementView {
+  id             String       @id @default(cuid())
+  userId         String
+  announcementId Int
+  viewedAt       DateTime     @default(now())
+  
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, announcementId]) // Prevent duplicate entries
+  @@map("announcement_views")
+}
+
 model Announcement {
   id          Int      @id @default(autoincrement())
   title       String
@@ -170,6 +182,7 @@ model Announcement {
   date        DateTime
   classId     Int?
   class       Class?   @relation(fields: [classId], references: [id])
+  views AnnouncementView[]
 }
 
 enum UserSex {
@@ -184,3 +197,4 @@ enum Day {
   THURSDAY
   FRIDAY
 }
+
