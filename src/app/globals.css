@@ -106,3 +106,10 @@
   color: gray !important;
   margin-bottom: 5px;
 }
+
+/* Fix autofill background for input fields */
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: black !important; 
+}
