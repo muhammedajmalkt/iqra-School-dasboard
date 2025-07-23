@@ -121,6 +121,7 @@ const Menu = async () => {
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
+
   return (
     <div className="mt-4 text-sm">
       {menuItems.map((i) => (

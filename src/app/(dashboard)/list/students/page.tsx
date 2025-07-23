@@ -9,7 +9,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
+import { auth} from "@clerk/nextjs/server";
 
 // TYPES
 type StudentList = Student & { class: Class };
@@ -148,7 +148,6 @@ const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     { value: "created_asc", label: "Oldest First" },
     { value: "created_desc", label: "Newest First" },
   ];
-
     
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
