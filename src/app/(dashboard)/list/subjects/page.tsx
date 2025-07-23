@@ -14,7 +14,7 @@ type SubjectList = Subject & { teachers: Teacher[] };
 const SubjectListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
@@ -51,7 +51,9 @@ const SubjectListPage = async ({
     </tr>
   );
 
-  const { page, sort, ...queryParams } = searchParams;
+  const resolvedSearchParams = await searchParams;
+
+  const { page, sort, ...queryParams } = resolvedSearchParams;
   const p = page ? parseInt(page) : 1;
   const currentSort = sort || "name_asc";
 

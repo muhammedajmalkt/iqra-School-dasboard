@@ -21,8 +21,11 @@ type AssignmentList = Assignment & {
 const AssignmentListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  // Await the searchParams Promise
+  const resolvedSearchParams = await searchParams;
+  
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
   const currentUserId = userId;
@@ -84,12 +87,11 @@ const AssignmentListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
 
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.AssignmentWhereInput = {};
 
   query.lesson = {};
@@ -117,7 +119,6 @@ const AssignmentListPage = async ({
   }
 
   // ROLE CONDITIONS
-
   switch (role) {
     case "admin":
       break;
@@ -145,14 +146,15 @@ const AssignmentListPage = async ({
     default:
       break;
   }
+
   // Handle sorting
   const currentSort = queryParams.sort || "startDate_desc";
-  const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
+  const orderBy: Prisma.AssignmentOrderByWithRelationInput = (() => {
     switch (currentSort) {
       case "title_asc":
         return { title: "asc" };
       case "title_desc":
-        return { title : "desc" };
+        return { title: "desc" };
       case "startDate_asc":
         return { startDate: "asc" };
       case "startDate_desc":
@@ -161,6 +163,7 @@ const AssignmentListPage = async ({
         return { title: "asc" };
     }
   })();
+
   const [data, count] = await prisma.$transaction([
     prisma.assignment.findMany({
       where: query,
@@ -179,9 +182,8 @@ const AssignmentListPage = async ({
     }),
     prisma.assignment.count({ where: query }),
   ]);
-  
-    const classes = await prisma.class.findMany();
 
+  const classes = await prisma.class.findMany();
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -197,6 +199,7 @@ const AssignmentListPage = async ({
     { value: "startDate_asc", label: "Oldest First" },
     { value: "startDate_desc", label: "Newest First" },
   ];
+
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
@@ -232,7 +235,6 @@ const AssignmentListPage = async ({
               </div>
             </div>
 
-
             {/* Filter Dropdown */}
             <div className="relative group">
               <button
@@ -260,7 +262,7 @@ const AssignmentListPage = async ({
                   {classes.map((classItem) => (
                     <Link
                       key={classItem.id}
-                      href={`/list/students?${getQueryString({
+                      href={`/list/assignments?${getQueryString({
                         ...queryParams,
                         classId: classItem.id.toString(),
                       })}`}
