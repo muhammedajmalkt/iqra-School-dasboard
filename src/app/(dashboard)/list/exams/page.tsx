@@ -20,70 +20,72 @@ type ExamList = Exam & {
 const ExamListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  const { userId, sessionClaims } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+  const currentUserId = userId;
 
-const { userId, sessionClaims } = await auth();
-const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-const currentUserId = userId;
+  const columns = [
+    {
+      header: "Subject Name",
+      accessor: "name",
+    },
+    {
+      header: "Class",
+      accessor: "class",
+    },
+    {
+      header: "Teacher",
+      accessor: "teacher",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Date",
+      accessor: "date",
+      className: "hidden md:table-cell",
+    },
+    ...(role === "admin" || role === "teacher"
+      ? [
+          {
+            header: "Actions",
+            accessor: "action",
+          },
+        ]
+      : []),
+  ];
 
+  const renderRow = (item: ExamList) => (
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
+      <td className="flex items-center gap-4 p-4">
+        {item.lesson.subject.name}
+      </td>
+      <td>{item.lesson.class.name}</td>
+      <td className="hidden md:table-cell">
+        {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
+      </td>
+      <td className="hidden md:table-cell">
+        {new Intl.DateTimeFormat("en-US").format(item.startTime)}
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          {(role === "admin" || role === "teacher") && (
+            <>
+              <FormContainer table="exam" type="update" data={item} />
+              <FormContainer table="exam" type="delete" id={item.id} />
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
 
-const columns = [
-  {
-    header: "Subject Name",
-    accessor: "name",
-  },
-  {
-    header: "Class",
-    accessor: "class",
-  },
-  {
-    header: "Teacher",
-    accessor: "teacher",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Date",
-    accessor: "date",
-    className: "hidden md:table-cell",
-  },
-  ...(role === "admin" || role === "teacher"
-    ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-    : []),
-];
+  const resolvedSearchParams = await searchParams;
 
-const renderRow = (item: ExamList) => (
-  <tr
-    key={item.id}
-    className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-  >
-    <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
-    <td>{item.lesson.class.name}</td>
-    <td className="hidden md:table-cell">
-      {item.lesson.teacher.name + " " + item.lesson.teacher.surname}
-    </td>
-    <td className="hidden md:table-cell">
-      {new Intl.DateTimeFormat("en-US").format(item.startTime)}
-    </td>
-    <td>
-      <div className="flex items-center gap-2">
-        {(role === "admin" || role === "teacher") && (
-          <>
-            <FormContainer table="exam" type="update" data={item} />
-            <FormContainer table="exam" type="delete" id={item.id} />
-          </>
-        )}
-      </div>
-    </td>
-  </tr>
-);
-
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -143,9 +145,9 @@ const renderRow = (item: ExamList) => (
     default:
       break;
   }
-    // Handle sorting
+  // Handle sorting
   const currentSort = queryParams.sort || "title_asc";
-  const orderBy: Prisma.ParentOrderByWithRelationInput = (() => {
+  const orderBy: Prisma.Enumerable<Prisma.ExamOrderByWithRelationInput> = (() => {
     switch (currentSort) {
       case "title_asc":
         return { title: "asc" };
@@ -178,7 +180,7 @@ const renderRow = (item: ExamList) => (
     }),
     prisma.exam.count({ where: query }),
   ]);
-    const getQueryString = (params: Record<string, string | undefined>) => {
+  const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       if (value) query.set(key, value);
@@ -200,7 +202,7 @@ const renderRow = (item: ExamList) => (
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-        {/* SORT BUTTON */}
+            {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
                 <Image src="/sort.png" alt="Sort" width={14} height={14} />
@@ -215,7 +217,9 @@ const renderRow = (item: ExamList) => (
                         sort: option.value,
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        currentSort === option.value ? "bg-blue-50 text-blue-600" : ""
+                        currentSort === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       {option.label}

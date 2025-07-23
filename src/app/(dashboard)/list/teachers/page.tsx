@@ -16,7 +16,7 @@ type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] };
 const TeacherListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const user = await currentUser();
   const role = user?.publicMetadata.role as string;
@@ -91,8 +91,10 @@ const TeacherListPage = async ({
       </td>
     </tr>
   );
+  const resolvedSearchParams = await searchParams;
 
-  const { page, ...queryParams } = searchParams;
+  const { page, ...queryParams } = resolvedSearchParams;
+
   const p = page ? Number.parseInt(page) : 1;
 
   // Build query based on search parameters

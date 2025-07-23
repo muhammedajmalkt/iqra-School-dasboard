@@ -99,13 +99,10 @@ const TeacherAttendanceForm = dynamic(
     ssr: false,
   }
 );
-const EventForm = dynamic(
-  () => import("./forms/EventForm"),
-  {
-    loading: () => <FormLoadingSkeleton formType="event" />,
-    ssr: false,
-  }
-);
+const EventForm = dynamic(() => import("./forms/EventForm"), {
+  loading: () => <FormLoadingSkeleton formType="event" />,
+  ssr: false,
+});
 
 const forms: {
   [key: string]: (
@@ -254,7 +251,7 @@ const FormModal = ({
         setOpen(false);
         router.refresh();
       }
-    }, [state.success, table, router]);
+    }, [state.success]);
 
     useEffect(() => {
       if (state.error) {
@@ -262,7 +259,7 @@ const FormModal = ({
           toast.error(state.errorMessage);
         }
       }
-    }, [state.errorMessage]);
+    }, [state.error, state.errorMessage]);
 
     if (type === "delete" && id) {
       return (

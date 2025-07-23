@@ -13,7 +13,7 @@ type EventList = Event & { class: Class };
 const EventListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
@@ -92,7 +92,9 @@ const EventListPage = async ({
     </tr>
   );
 
-  const { page, ...queryParams } = searchParams;
+  const resolvedSearchParams = await searchParams;
+
+  const { page, ...queryParams } = resolvedSearchParams;
 
   const p = page ? parseInt(page) : 1;
 
@@ -121,26 +123,26 @@ const EventListPage = async ({
 
   if (role && role !== "admin") {
     const roleConditions = {
-      teacher: { 
-        class: { 
-          lessons: { 
-            some: { teacherId: currentUserId! } 
-          } 
-        } 
+      teacher: {
+        class: {
+          lessons: {
+            some: { teacherId: currentUserId! },
+          },
+        },
       },
-      student: { 
-        class: { 
-          students: { 
-            some: { id: currentUserId! } 
-          } 
-        } 
+      student: {
+        class: {
+          students: {
+            some: { id: currentUserId! },
+          },
+        },
       },
-      parent: { 
-        class: { 
-          students: { 
-            some: { parentId: currentUserId! } 
-          } 
-        } 
+      parent: {
+        class: {
+          students: {
+            some: { parentId: currentUserId! },
+          },
+        },
       },
     };
 
@@ -170,8 +172,8 @@ const EventListPage = async ({
         take: ITEM_PER_PAGE,
         skip: ITEM_PER_PAGE * (p - 1),
         orderBy: {
-          startTime: 'asc' // Add ordering for better UX
-        }
+          startTime: "asc", // Add ordering for better UX
+        },
       }),
       prisma.event.count({ where: finalQuery }),
     ]);
@@ -185,7 +187,9 @@ const EventListPage = async ({
       <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
         {/* TOP */}
         <div className="flex items-center justify-between">
-          <h1 className="hidden md:block text-lg font-semibold">All Events ({count})</h1>
+          <h1 className="hidden md:block text-lg font-semibold">
+            All Events ({count})
+          </h1>
           <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
             <TableSearch />
             <div className="flex items-center gap-4 self-end">
@@ -195,14 +199,18 @@ const EventListPage = async ({
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
                 <Image src="/sort.png" alt="" width={14} height={14} />
               </button>
-              {role === "admin" && <FormContainer table="event" type="create" />}
+              {role === "admin" && (
+                <FormContainer table="event" type="create" />
+              )}
             </div>
           </div>
         </div>
         {/* LIST */}
         {data.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No events found. {role !== "admin" && "You may not have access to view events, or there are no events in your classes."}
+            No events found.{" "}
+            {role !== "admin" &&
+              "You may not have access to view events, or there are no events in your classes."}
           </div>
         ) : (
           <Table columns={columns} renderRow={renderRow} data={data} />

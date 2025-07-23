@@ -12,10 +12,11 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 const SingleStudentPage = async ({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) => {
+  const { id } = await params;
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
