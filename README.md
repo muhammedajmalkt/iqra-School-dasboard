@@ -94,14 +94,5 @@ Make sure to add your Cloudinary credentials to your `.env.local` file:
 
 ```env
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
-
-## 📂 Project Structure
-
-This is a Next.js school management dashboard with the following key features:
-- User authentication with Clerk
-- Image uploads with Cloudinary
-- Role-based access control
-- Responsive design with Tailwind CSS
