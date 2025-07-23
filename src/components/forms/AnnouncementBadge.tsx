@@ -8,7 +8,9 @@ interface AnnouncementBadgeProps {
   unseenCount: number;
 }
 
-export default function AnnouncementBadge({ unseenCount: initialCount }: AnnouncementBadgeProps) {
+export default function AnnouncementBadge({
+  unseenCount: initialCount,
+}: AnnouncementBadgeProps) {
   const [unseenCount, setUnseenCount] = useState(initialCount);
   const router = useRouter();
 
