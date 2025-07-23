@@ -69,7 +69,7 @@ const StudentListPage = async ({
               <Image src="/view.png" alt="" width={16} height={16} />
             </button>
           </Link>
-          {role === "admin" && (
+          {(role === "admin" || role === "teacher") && (
             <>
               <FormContainer table="student" type="update" data={item} />
               <FormContainer table="student" type="delete" id={item.id} />
@@ -80,7 +80,7 @@ const StudentListPage = async ({
     </tr>
   );
 
-   const resolvedSearchParams = await searchParams;
+  const resolvedSearchParams = await searchParams;
 
   const { page, ...queryParams } = resolvedSearchParams;
 
@@ -167,13 +167,14 @@ const StudentListPage = async ({
   ]);
 
   // For teachers, only get classes they supervise for the filter dropdown
-  const classes = role === "teacher" 
-    ? await prisma.class.findMany({
-        where: {
-          supervisorId: userId,
-        },
-      })
-    : await prisma.class.findMany();
+  const classes =
+    role === "teacher"
+      ? await prisma.class.findMany({
+          where: {
+            supervisorId: userId,
+          },
+        })
+      : await prisma.class.findMany();
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -238,7 +239,12 @@ const StudentListPage = async ({
                       : "bg-lamaYellow hover:bg-yellow-400"
                   }`}
                 >
-                  <Image src="/filter.png" alt="Filter" width={14} height={14} />
+                  <Image
+                    src="/filter.png"
+                    alt="Filter"
+                    width={14}
+                    height={14}
+                  />
                 </button>
                 <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="py-1">
@@ -274,8 +280,7 @@ const StudentListPage = async ({
               </div>
             )}
 
-            {/* Add Button - Only for admins */}
-            {role === "admin" && (
+            {(role === "admin" || role === "teacher") && (
               <FormContainer table="student" type="create" />
             )}
           </div>
