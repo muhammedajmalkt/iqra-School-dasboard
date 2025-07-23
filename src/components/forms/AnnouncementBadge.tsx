@@ -13,11 +13,8 @@ export default function AnnouncementBadge({ unseenCount: initialCount }: Announc
   const router = useRouter();
 
   const handleClick = () => {
-    // Reset count immediately for UI feedback
     setUnseenCount(0);
-
-    // Navigate to announcements with view=true
-    router.push("/list/announcements?view=true");
+    router.push("/list/announcements");
   };
 
   return (
