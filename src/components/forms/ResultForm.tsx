@@ -2,13 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import InputField from "../InputField";
-import { type Dispatch, type SetStateAction, useEffect } from "react";
-import { resultSchema, type ResultSchema } from "@/lib/formValidationSchemas";
 import { useFormState } from "react-dom";
-import { createResult, updateResult } from "@/lib/actions";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { toast } from "react-toastify";
+import { resultSchema, type ResultSchema } from "@/lib/formValidationSchemas";
+import { createResult, updateResult } from "@/lib/actions";
 
 const ResultForm = ({
   type,
@@ -18,7 +17,7 @@ const ResultForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: Dispatch<SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: any;
 }) => {
   const {
@@ -30,11 +29,11 @@ const ResultForm = ({
   } = useForm<ResultSchema>({
     resolver: zodResolver(resultSchema),
     defaultValues: {
-      id: data?.id ?? undefined,
-      score: data?.score ?? undefined,
-      examId: data?.examId ?? undefined,
-      assignmentId: data?.assignmentId ?? undefined,
-      studentId: data?.studentId ?? "",
+      id: data?.id || "",
+      score: data?.score || "",
+      examId: data?.examId || undefined,
+      assignmentId: data?.assignmentId || undefined,
+      studentId: data?.studentId || "",
     },
   });
 
@@ -47,20 +46,7 @@ const ResultForm = ({
     }
   );
 
-  const onSubmit = handleSubmit((formData) => {
-    formAction(formData);
-  });
-
   const router = useRouter();
-
-  useEffect(() => {
-    if (state.success) {
-      toast(`Result has been ${type === "create" ? "created" : "updated"}!`);
-      setOpen(false);
-      router.refresh();
-    }
-  }, [state, router, type, setOpen]);
-
   const { students = [], exams = [], assignments = [] } = relatedData || {};
 
   const examId = watch("examId");
@@ -69,121 +55,136 @@ const ResultForm = ({
   const handleExamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setValue("examId", value ? Number(value) : undefined);
-    if (value) {
-      setValue("assignmentId", undefined);
-    }
+    if (value) setValue("assignmentId", undefined);
   };
 
   const handleAssignmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setValue("assignmentId", value ? Number(value) : undefined);
-    if (value) {
-      setValue("examId", undefined);
-    }
+    if (value) setValue("examId", undefined);
   };
 
+  const onSubmit = handleSubmit((formData) => {
+    formAction(formData);
+  });
+
+  useEffect(() => {
+    if (state.success) {
+      toast.success(`Result has been ${type === "create" ? "created" : "updated"}!`);
+      setOpen(false);
+      router.refresh();
+    }
+  }, [state, type, setOpen, router]);
+
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new result" : "Update the result"}
-      </h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Result" : "Update Result"}
+      </h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Result Information
-      </span>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Result Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Student</label>
+            <select
+              {...register("studentId")}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Select Student</option>
+              {students?.map((student: { id: string; name: string }) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+            {errors.studentId && (
+              <p className="text-xs text-red-500 mt-1">{errors.studentId.message}</p>
+            )}
+          </div>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Student</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("studentId")}
-            defaultValue={data?.studentId || ""}
-          >
-            <option value="">Select Student</option>
-            {students?.map((student: { id: string; name: string }) => (
-              <option key={student.id} value={student.id}>
-                {student.name}
-              </option>
-            ))}
-          </select>
-          {errors.studentId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.studentId.message.toString()}
-            </p>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">Score</label>
+            <input
+              type="number"
+              {...register("score", { valueAsNumber: true })}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.score && (
+              <p className="text-xs text-red-500 mt-1">{errors.score.message}</p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <InputField
-          label="Score"
-          name="score"
-          type="number"
-          defaultValue={data?.score}
-          register={register}
-          error={errors?.score}
-        />
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Assessment</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Exam</label>
+            <select
+              value={examId || ""}
+              onChange={handleExamChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Exam</option>
+              {exams?.map((exam: { id: number; title: string }) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title}
+                </option>
+              ))}
+            </select>
+            {errors.examId && (
+              <p className="text-xs text-red-500 mt-1">{errors.examId.message}</p>
+            )}
+          </div>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-xs text-gray-500">Exam</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            value={examId || ""}
-            onChange={handleExamChange}
-          >
-            <option value="">Select Exam</option>
-            {exams?.map((exam: { id: number; title: string }) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.title}
-              </option>
-            ))}
-          </select>
-          {errors.examId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.examId.message.toString()}
-            </p>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">Assignment</label>
+            <select
+              value={assignmentId || ""}
+              onChange={handleAssignmentChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Assignment</option>
+              {assignments?.map((assignment: { id: number; title: string }) => (
+                <option key={assignment.id} value={assignment.id}>
+                  {assignment.title}
+                </option>
+              ))}
+            </select>
+            {errors.assignmentId && (
+              <p className="text-xs text-red-500 mt-1">{errors.assignmentId.message}</p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/3">
-          <label className="text-xs text-gray-500">Assignment</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            value={assignmentId || ""}
-            onChange={handleAssignmentChange}
-          >
-            <option value="">Select Assignment</option>
-            {assignments?.map((assignment: { id: number; title: string }) => (
-              <option key={assignment.id} value={assignment.id}>
-                {assignment.title}
-              </option>
-            ))}
-          </select>
-          {errors.assignmentId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.assignmentId.message.toString()}
-            </p>
-          )}
-        </div>
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-      </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
+      {data?.id && (
+        <input type="hidden" {...register("id")} />
       )}
 
-      <button className="bg-blue-400 text-white p-2 rounded-md" type="submit">
-        {type === "create" ? "Create" : "Update"}
-      </button>
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          {type === "create" ? "Create" : "Update"}
+        </button>
+      </div>
     </form>
   );
 };

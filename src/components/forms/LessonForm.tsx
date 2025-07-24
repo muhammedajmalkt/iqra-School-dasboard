@@ -1,13 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import InputField from "../InputField";
 import { lessonSchema, type LessonSchema } from "@/lib/formValidationSchemas";
 import { createLesson, updateLesson } from "@/lib/actions";
 import { useActionState, useTransition } from "react";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "react-toastify";
 
@@ -30,7 +29,6 @@ const LessonForm = ({
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
   } = useForm<LessonSchema>({
     resolver: zodResolver(lessonSchema),
     defaultValues: {
@@ -60,6 +58,7 @@ const LessonForm = ({
 
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { subjects = [], classes = [], teachers = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
     startTransition(() => {
@@ -75,132 +74,186 @@ const LessonForm = ({
     }
   }, [state, router, setOpen, type]);
 
-  const { subjects, classes, teachers } = relatedData;
-
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new lesson" : "Update the lesson"}
-      </h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Lesson" : "Update Lesson"}
+      </h2>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Lesson Name"
-          name="name"
-          register={register}
-          error={errors.name}
-        />
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Day</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm"
-            {...register("day")}
-          >
-            <option value="">Select Day</option>
-            {["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"].map(
-              (day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              )
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Basic Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Lesson Name</label>
+            <input
+              {...register("name")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.name?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.name.message.toString()}
+              </p>
             )}
-          </select>
-          {errors.day && (
-            <p className="text-xs text-red-400">{errors.day.message}</p>
-          )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Day</label>
+            <select
+              {...register("day")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Day</option>
+              {["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"].map(
+                (day) => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                )
+              )}
+            </select>
+            {errors.day?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.day.message.toString()}
+              </p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <InputField
-          label="Start Time"
-          name="startTime"
-          type="datetime-local"
-          register={register}
-          error={errors.startTime}
-        />
-        <InputField
-          label="End Time"
-          name="endTime"
-          type="datetime-local"
-          register={register}
-          error={errors.endTime}
-        />
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Subject</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm"
-            {...register("subjectId")}
-          >
-            <option value="">Select Subject</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          {errors.subjectId && (
-            <p className="text-xs text-red-400">{errors.subjectId.message}</p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Time Schedule</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Start Time</label>
+            <input
+              type="datetime-local"
+              {...register("startTime")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.startTime?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.startTime.message.toString()}
+              </p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">End Time</label>
+            <input
+              type="datetime-local"
+              {...register("endTime")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.endTime?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.endTime.message.toString()}
+              </p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Class</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm"
-            {...register("classId")}
-          >
-            <option value="">Select Class</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          {errors.classId && (
-            <p className="text-xs text-red-400">{errors.classId.message}</p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Assignments</legend>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Subject</label>
+            <select
+              {...register("subjectId")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Subject</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            {errors.subjectId?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.subjectId.message.toString()}
+              </p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Class</label>
+            <select
+              {...register("classId")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Class</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {errors.classId?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.classId.message.toString()}
+              </p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Teacher</label>
+            <select
+              {...register("teacherId")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Teacher</option>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            {errors.teacherId?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.teacherId.message.toString()}
+              </p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Teacher</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm"
-            {...register("teacherId")}
-          >
-            <option value="">Select Teacher</option>
-            {teachers.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          {errors.teacherId && (
-            <p className="text-xs text-red-400">{errors.teacherId.message}</p>
-          )}
-        </div>
+      {data?.id && (
+        <input type="hidden" {...register("id")} />
+      )}
+
+      {(state.error && state.errorMessage) && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+      {(state.error && !state.errorMessage) && (
+        <p className="text-red-500 text-sm">Something went wrong!</p>
+      )}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {isPending
+            ? type === "create"
+              ? "Creating..."
+              : "Updating..."
+            : type === "create"
+            ? "Create"
+            : "Update"}
+        </button>
       </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
-      )}
-      {state.error && !state.errorMessage && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-
-      <button
-        type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        disabled={isPending}
-      >
-        {isPending
-          ? type === "create"
-            ? "Creating..."
-            : "Updating..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
-      </button>
     </form>
   );
 };

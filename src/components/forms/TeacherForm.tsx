@@ -1,16 +1,7 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import InputField from "../InputField";
-import Image from "next/image";
-import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
-import { teacherSchema, type TeacherSchema } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
-import { createTeacher, updateTeacher } from "@/lib/actions";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
-import { CldUploadWidget } from "next-cloudinary";
 
 const TeacherForm = ({
   type,
@@ -20,278 +11,278 @@ const TeacherForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: Dispatch<SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: any;
 }) => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<TeacherSchema>({
-    resolver: zodResolver(teacherSchema),
+  const [formData, setFormData] = useState({
+    username: data?.username || "",
+    email: data?.email || "",
+    password: "",
+    name: data?.name || "",
+    surname: data?.surname || "",
+    phone: data?.phone || "",
+    address: data?.address || "",
+    bloodType: data?.bloodType || "",
+    sex: data?.sex || "",
+    birthday: data?.birthday ? new Date(data.birthday).toISOString().split("T")[0] : "",
+    id: data?.id || "",
   });
 
-  const [img, setImg] = useState<any>();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
     data?.subjects?.map((subject: any) => subject.id.toString()) || []
   );
-
-  const [state, formAction] = useFormState(
-    type === "create" ? createTeacher : updateTeacher,
-    {
-      success: false,
-      error: false,
-      errorMessage: "",
-    }
-  );
-
-  const onSubmit = handleSubmit((formData) => {
-    const submitData = {
-      ...formData,
-      img: img?.secure_url,
-      subjects: selectedSubjects,
-    };
-    formAction(submitData);
-  });
+  const [image, setImage] = useState(data?.img || "");
+  const [error, setError] = useState("");
 
   const router = useRouter();
-  console.log("state:", state);
-  useEffect(() => {
-    if (state.success) {
-      toast(`Teacher has been ${type === "create" ? "created" : "updated"}!`);
-      setOpen(false);
-      router.refresh();
-    }
-  }, [state, router, type, setOpen]);
+  const { subjects = [] } = relatedData || {};
 
-  // useEffect(() => {
-  //   if (state.error) {
-  //     if (state.errorMessage) {
-  //       // toast.error("Something went wrong!");
-  //       toast.error(state.errorMessage);
-  //     }
-  //   }
-  // }, [state.errorMessage]);
-
-  // Set default values for update
-  useEffect(() => {
-    if (type === "update" && data) {
-      setValue("username", data.username);
-      setValue("name", data.name);
-      setValue("surname", data.surname);
-      setValue("email", data.email);
-      setValue("phone", data.phone);
-      setValue("address", data.address);
-      setValue("bloodType", data.bloodType);
-      setValue("sex", data.sex);
-      if (data.birthday) {
-        setValue("birthday", new Date(data.birthday));
-      }
-      if (data.id) {
-        setValue("id", data.id);
-      }
-    }
-  }, [data, setValue, type]);
-
-  const { subjects } = relatedData || { subjects: [] };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubjectChange = (subjectId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedSubjects([...selectedSubjects, subjectId]);
-    } else {
-      setSelectedSubjects(selectedSubjects.filter((id) => id !== subjectId));
+    setSelectedSubjects(prev =>
+      checked
+        ? [...prev, subjectId]
+        : prev.filter(id => id !== subjectId)
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (selectedSubjects.length === 0) {
+      setError("At least one subject is required");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        type === "create" ? "/api/teachers" : `/api/teachers/${data.id}`,
+        {
+          method: type === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            img: image,
+            subjects: selectedSubjects,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(await response.text());
+
+      setOpen(false);
+      router.refresh();
+      alert(`Teacher ${type === "create" ? "created" : "updated"} successfully!`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
   };
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new teacher" : "Update the teacher"}
-      </h1>
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6  h-[70vh] overflow-scroll scrollbar-hide">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Teacher" : "Update Teacher"}
+      </h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Authentication Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Username"
-          name="username"
-          defaultValue={data?.username}
-          register={register}
-          error={errors?.username}
-        />
-        <InputField
-          label="Email"
-          name="email"
-          defaultValue={data?.email}
-          register={register}
-          error={errors?.email}
-        />
-        <InputField
-          label="Password"
-          name="password"
-          type="password"
-          defaultValue={data?.password}
-          register={register}
-          error={errors?.password}
-        />
-      </div>
-
-      <span className="text-xs text-gray-400 font-medium">
-        Personal Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="First Name"
-          name="name"
-          defaultValue={data?.name}
-          register={register}
-          error={errors.name}
-        />
-        <InputField
-          label="Last Name"
-          name="surname"
-          defaultValue={data?.surname}
-          register={register}
-          error={errors.surname}
-        />
-        <InputField
-          label="Phone"
-          name="phone"
-          defaultValue={data?.phone}
-          register={register}
-          error={errors.phone}
-        />
-        <InputField
-          label="Address"
-          name="address"
-          defaultValue={data?.address}
-          register={register}
-          error={errors.address}
-        />
-        <InputField
-          label="Blood Type"
-          name="bloodType"
-          defaultValue={data?.bloodType}
-          register={register}
-          error={errors.bloodType}
-        />
-        <InputField
-          label="Birthday"
-          name="birthday"
-          defaultValue={
-            data?.birthday
-              ? new Date(data.birthday).toISOString().split("T")[0]
-              : ""
-          }
-          register={register}
-          error={errors.birthday}
-          type="date"
-        />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Sex</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("sex")}
-            defaultValue={data?.sex}
-          >
-            <option value="">Select Sex</option>
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-          </select>
-          {errors.sex?.message && (
-            <p className="text-xs text-red-400">
-              {errors.sex.message.toString()}
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">Subjects</label>
-          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-            {subjects.map((subject: { id: number; name: string }) => (
-              <label
-                key={subject.id}
-                className="flex items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedSubjects.includes(subject.id.toString())}
-                  onChange={(e) =>
-                    handleSubjectChange(subject.id.toString(), e.target.checked)
-                  }
-                  className="w-4 h-4"
-                />
-                {subject.name}
-              </label>
-            ))}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Authentication</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Username</label>
+            <input
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
           </div>
-          {selectedSubjects.length === 0 && (
-            <p className="text-xs text-red-400">
-              At least one subject is required
-            </p>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          {type === "create" && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Password</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                required={type === "create"}
+              />
+            </div>
           )}
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Photo</label>
-          <CldUploadWidget
-            uploadPreset="school"
-            onSuccess={(result, { widget }) => {
-              setImg(result.info);
-              widget.close();
-            }}
-          >
-            {({ open }) => {
-              return (
-                <div className="flex items-center gap-2">
-                  <Image
-                    src={img?.secure_url || data?.img || "/noAvatar.png"}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="w-7 h-7 rounded-full object-cover"
-                  />
-                  <div
-                    className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
-                    onClick={() => open()}
-                  >
-                    <Image src="/upload.png" alt="" width={28} height={28} />
-                    <span>Upload a photo</span>
-                  </div>
-                </div>
-              );
-            }}
-          </CldUploadWidget>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Personal Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">First Name</label>
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Last Name</label>
+            <input
+              name="surname"
+              value={formData.surname}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Phone</label>
+            <input
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Address</label>
+            <input
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Blood Type</label>
+            <input
+              name="bloodType"
+              value={formData.bloodType}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Birthday</label>
+            <input
+              type="date"
+              name="birthday"
+              value={formData.birthday}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sex</label>
+            <select
+              name="sex"
+              value={formData.sex}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+            </select>
+          </div>
+          {data?.id && (
+            <input type="hidden" name="id" value={formData.id} />
+          )}
         </div>
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Subjects</legend>
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
+          {subjects.map((subject: { id: number; name: string }) => (
+            <label key={subject.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedSubjects.includes(subject.id.toString())}
+                onChange={(e) => handleSubjectChange(subject.id.toString(), e.target.checked)}
+              />
+              {subject.name}
+            </label>
+          ))}
+        </div>
+        {selectedSubjects.length === 0 && (
+          <p className="text-sm text-red-500">Please select at least one subject</p>
+        )}
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-500">Photo</legend>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
+            {image ? (
+              <img src={image} alt="Teacher" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-[8px]">
+                No photo
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              // Implement your image upload logic here
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  // In a real app, you would upload the file here
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    setImage(event.target?.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              };
+              input.click();
+            }}
+            className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+          >
+            Upload Photo
+          </button>
+        </div>
+      </fieldset>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={selectedSubjects.length === 0}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {type === "create" ? "Create" : "Update"}
+        </button>
       </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
-      )}
-
-      <button
-        className="bg-blue-400 text-white p-2 rounded-md disabled:opacity-50"
-        disabled={selectedSubjects.length === 0}
-      >
-        {type === "create" ? "Create" : "Update"}
-      </button>
     </form>
   );
 };
