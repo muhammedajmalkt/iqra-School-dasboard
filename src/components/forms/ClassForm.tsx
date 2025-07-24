@@ -1,14 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import InputField from "../InputField";
 import { classSchema, ClassSchema } from "@/lib/formValidationSchemas";
 import { createClass, updateClass } from "@/lib/actions";
 import { useActionState, useTransition } from "react";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { toast } from "react-toastify";
-import { useRouter } from "next/navigation";
 
 const ClassForm = ({
   type,
@@ -32,6 +32,7 @@ const ClassForm = ({
       capacity: data?.capacity || 0,
       supervisorId: data?.supervisorId || "",
       gradeId: data?.gradeId || 0,
+      id: data?.id || "",
     },
   });
 
@@ -44,14 +45,14 @@ const ClassForm = ({
   );
 
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const { teachers = [], grades = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
     startTransition(() => {
       formAction(formData);
     });
   });
-
-  const router = useRouter();
 
   useEffect(() => {
     if (state.success) {
@@ -61,108 +62,124 @@ const ClassForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { teachers, grades } = relatedData;
-
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new class" : "Update the class"}
-      </h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Class" : "Update Class"}
+      </h2>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Class name"
-          name="name"
-          defaultValue={data?.name}
-          register={register}
-          error={errors?.name}
-        />
-
-        <InputField
-          label="Capacity"
-          name="capacity"
-          type="number"
-          defaultValue={data?.capacity}
-          register={register}
-          error={errors?.capacity}
-        />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Supervisor</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("supervisorId")}
-            defaultValue={data?.supervisorId || ""}
-          >
-            <option value="">Select a supervisor (Optional)</option>
-            {teachers.map(
-              (teacher: { id: string; name: string; surname: string }) => (
-                <option value={teacher.id} key={teacher.id}>
-                  {teacher.name + " " + teacher.surname}
-                </option>
-              )
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Class Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Class Name</label>
+            <input
+              {...register("name")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.name?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.name.message.toString()}
+              </p>
             )}
-          </select>
-          {errors.supervisorId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.supervisorId.message.toString()}
-            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Capacity</label>
+            <input
+              type="number"
+              {...register("capacity", { valueAsNumber: true })}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.capacity?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.capacity.message.toString()}
+              </p>
+            )}
+          </div>
+          {data?.id && (
+            <input type="hidden" {...register("id")} />
           )}
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Grade</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("gradeId")}
-            defaultValue={data?.gradeId || ""}
-          >
-            <option value="">Select a grade</option>
-            {grades.map((grade: { id: number; level: number }) => (
-              <option value={grade.id} key={grade.id}>
-                Grade {grade.level}
-              </option>
-            ))}
-          </select>
-          {errors.gradeId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.gradeId.message.toString()}
-            </p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Assignments</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Supervisor</label>
+            <select
+              {...register("supervisorId")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select a supervisor (Optional)</option>
+              {teachers.map(
+                (teacher: { id: string; name: string; surname: string }) => (
+                  <option value={teacher.id} key={teacher.id}>
+                    {teacher.name + " " + teacher.surname}
+                  </option>
+                )
+              )}
+            </select>
+            {errors.supervisorId?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.supervisorId.message.toString()}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Grade</label>
+            <select
+              {...register("gradeId", { valueAsNumber: true })}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Select a grade</option>
+              {grades.map((grade: { id: number; level: number }) => (
+                <option value={grade.id} key={grade.id}>
+                  Grade {grade.level}
+                </option>
+              ))}
+            </select>
+            {errors.gradeId?.message && (
+              <p className="text-xs text-red-400 mt-1">
+                {errors.gradeId.message.toString()}
+              </p>
+            )}
+          </div>
         </div>
+      </fieldset>
+
+      {(state.error && state.errorMessage) && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+      {(state.error && !state.errorMessage) && (
+        <p className="text-red-500 text-sm">Something went wrong!</p>
+      )}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {isPending
+            ? type === "create"
+              ? "Creating..."
+              : "Updating..."
+            : type === "create"
+            ? "Create"
+            : "Update"}
+        </button>
       </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
-      )}
-      {state.error && !state.errorMessage && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-
-      <button
-        type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        disabled={isPending}
-      >
-        {isPending
-          ? type === "create"
-            ? "Creating..."
-            : "Updating..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
-      </button>
     </form>
   );
 };

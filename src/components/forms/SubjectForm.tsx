@@ -1,14 +1,8 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import InputField from "../InputField";
-import { subjectSchema, SubjectSchema } from "@/lib/formValidationSchemas";
-import { createSubject, updateSubject } from "@/lib/actions";
-import { useActionState, useTransition } from "react";
-import { Dispatch, SetStateAction, useEffect } from "react";
-import { toast } from "react-toastify";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 const SubjectForm = ({
   type,
@@ -18,124 +12,119 @@ const SubjectForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: Dispatch<SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: any;
 }) => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SubjectSchema>({
-    resolver: zodResolver(subjectSchema),
-    defaultValues: {
-      name: data?.name || "",
-      teachers: data?.teachers?.map((teacher: any) => teacher.id) || [],
-    },
+  const [formData, setFormData] = useState({
+    name: data?.name || "",
+    id: data?.id || "",
   });
 
-  const [state, formAction] = useActionState(
-    type === "create" ? createSubject : updateSubject,
-    {
-      success: false,
-      error: false,
-    }
+  const [selectedTeachers, setSelectedTeachers] = useState<string[]>(
+    data?.teachers?.map((teacher: any) => teacher.id.toString()) || []
   );
-  
-  const [isPending, startTransition] = useTransition();
-
-  const onSubmit = handleSubmit((formData) => {
-    startTransition(() => {
-      formAction(formData);
-    });
-  });
+  const [error, setError] = useState("");
 
   const router = useRouter();
+  const { teachers = [] } = relatedData || {};
 
-  useEffect(() => {
-    if (state.success) {
-      toast(`Subject has been ${type === "create" ? "created" : "updated"}!`);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTeacherChange = (teacherId: string, checked: boolean) => {
+    setSelectedTeachers(prev =>
+      checked
+        ? [...prev, teacherId]
+        : prev.filter(id => id !== teacherId)
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch(
+        type === "create" ? "/api/subjects" : `/api/subjects/${data.id}`,
+        {
+          method: type === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            teachers: selectedTeachers,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(await response.text());
+
       setOpen(false);
       router.refresh();
+      toast(`Subject ${type === "create" ? "created" : "updated"} successfully!`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     }
-  }, [state, router, type, setOpen]);
-
-  const { teachers } = relatedData;
+  };
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new subject" : "Update the subject"}
-      </h1>
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Subject" : "Update Subject"}
+      </h2>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Subject name"
-          name="name"
-          defaultValue={data?.name}
-          register={register}
-          error={errors?.name}
-        />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-
-        <div className="flex flex-col gap-2 w-full md:w-1/2">
-          <label className="text-xs text-gray-500">Teachers</label>
-          <select
-            multiple
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full min-h-[100px]"
-            {...register("teachers")}
-            defaultValue={
-              data?.teachers?.map((teacher: any) => teacher.id) || []
-            }
-          >
-            {teachers.map(
-              (teacher: { id: string; name: string; surname: string }) => (
-                <option value={teacher.id} key={teacher.id}>
-                  {teacher.name + " " + teacher.surname}
-                </option>
-              )
-            )}
-          </select>
-          <p className="text-xs text-gray-400">
-            Hold Ctrl/Cmd to select multiple teachers
-          </p>
-          {errors.teachers?.message && (
-            <p className="text-xs text-red-400">
-              {errors.teachers.message.toString()}
-            </p>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Subject Information</legend>
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Name</label>
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          {data?.id && (
+            <input type="hidden" name="id" value={formData.id} />
           )}
         </div>
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Teachers</legend>
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded scrollbar-hide">
+          {teachers.map((teacher: { id: number; name: string; surname: string }) => (
+            <label key={teacher.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedTeachers.includes(teacher.id.toString())}
+                onChange={(e) => handleTeacherChange(teacher.id.toString(), e.target.checked)}
+              />
+              {teacher.name} {teacher.surname}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {type === "create" ? "Create" : "Update"}
+        </button>
       </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
-      )}
-      {state.error && !state.errorMessage && (
-        <span className="text-red-500">Something went wrong!</span>
-      )}
-
-      <button
-        type="submit"
-        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        disabled={isPending}
-      >
-        {isPending
-          ? type === "create"
-            ? "Creating..."
-            : "Updating..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
-      </button>
     </form>
   );
 };

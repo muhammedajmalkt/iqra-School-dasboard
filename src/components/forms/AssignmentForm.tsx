@@ -2,16 +2,15 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import InputField from "../InputField";
 import {
   assignmentSchema,
   type AssignmentSchema,
 } from "@/lib/formValidationSchemas";
 import { createAssignment, updateAssignment } from "@/lib/actions";
+import { useActionState, useTransition } from "react";
 
 const AssignmentForm = ({
   type,
@@ -21,7 +20,7 @@ const AssignmentForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: {
     lessons?: {
       id: number;
@@ -38,9 +37,14 @@ const AssignmentForm = ({
     formState: { errors },
   } = useForm<AssignmentSchema>({
     resolver: zodResolver(assignmentSchema),
+    defaultValues: {
+      title: data?.title || "",
+      startDate: data?.startDate ? new Date(data.startDate).toISOString().split("T")[0] : "",
+      dueDate: data?.dueDate ? new Date(data.dueDate).toISOString().split("T")[0] : "",
+      lessonId: data?.lessonId || "",
+      id: data?.id || "",
+    },
   });
-
-  
 
   const [state, formAction] = useActionState(
     type === "create" ? createAssignment : updateAssignment,
@@ -52,22 +56,17 @@ const AssignmentForm = ({
   );
 
   const [isPending, startTransition] = useTransition();
-
   const router = useRouter();
 
   const onSubmit = handleSubmit((formData) => {
-    const submitData = {
-      ...formData,
-    };
-
     startTransition(() => {
-      formAction(submitData);
+      formAction(formData);
     });
   });
 
   useEffect(() => {
     if (state.success) {
-      toast(
+      toast.success(
         `Assignment has been ${type === "create" ? "created" : "updated"}!`
       );
       setOpen(false);
@@ -75,118 +74,108 @@ const AssignmentForm = ({
     }
   }, [state, type, setOpen, router]);
 
-  useEffect(() => {
-    if (type === "update" && data) {
-      setValue("title", data.title);
-      setValue("startDate", data.startDate?.toISOString().split("T")[0] || "");
-      setValue("dueDate", data.dueDate?.toISOString().split("T")[0] || "");
-      setValue("lessonId", data.lessonId);
-      if (data.id) {
-        setValue("id", data.id);
-      }
-    }
-  }, [data, setValue, type]);
-
-  // Format date for input field (convert Date to YYYY-MM-DD)
-  const formatDateForInput = (date: Date | string | undefined) => {
-    if (!date) return "";
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    return dateObj.toISOString().split("T")[0];
-  };
-
-  console.log("relatedData:", relatedData);
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create"
-          ? "Create a new assignment"
-          : "Update the assignment"}
-      </h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Assignment" : "Update Assignment"}
+      </h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Assignment Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Title"
-          name="title"
-          defaultValue={data?.title}
-          register={register}
-          error={errors?.title}
-        />
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Lesson</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("lessonId")}
-            defaultValue={data?.lessonId}
-          >
-            <option value="">Select a lesson</option>
-            {relatedData?.lessons?.map((lesson) => (
-              <option value={lesson.id} key={lesson.id}>
-                {lesson.name} - {lesson.subject.name} ({lesson.class.name})
-              </option>
-            ))}
-          </select>
-          {errors.lessonId && (
-            <p className="text-xs text-red-400">{errors.lessonId.message}</p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Assignment Information</legend>
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Title</label>
+            <input
+              {...register("title")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.title && (
+              <p className="text-xs text-red-500 mt-1">{errors.title.message}</p>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Lesson</label>
+            <select
+              {...register("lessonId")}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Select a lesson</option>
+              {relatedData?.lessons?.map((lesson) => (
+                <option value={lesson.id} key={lesson.id}>
+                  {lesson.name} - {lesson.subject.name} ({lesson.class.name})
+                </option>
+              ))}
+            </select>
+            {errors.lessonId && (
+              <p className="text-xs text-red-500 mt-1">{errors.lessonId.message}</p>
+            )}
+          </div>
         </div>
-      </div>
+      </fieldset>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Schedule Information
-      </span>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Schedule Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Start Date</label>
+            <input
+              type="date"
+              {...register("startDate")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.startDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.startDate.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Due Date</label>
+            <input
+              type="date"
+              {...register("dueDate")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.dueDate && (
+              <p className="text-xs text-red-500 mt-1">{errors.dueDate.message}</p>
+            )}
+          </div>
+        </div>
+      </fieldset>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Start Date"
-          name="startDate"
-          type="date"
-          defaultValue={formatDateForInput(data?.startDate)}
-          register={register}
-          error={errors?.startDate}
-        />
-        <InputField
-          label="Due Date"
-          name="dueDate"
-          type="date"
-          defaultValue={formatDateForInput(data?.dueDate)}
-          register={register}
-          error={errors?.dueDate}
-        />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-      </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
+      {data?.id && (
+        <input type="hidden" {...register("id")} />
       )}
 
-      <button
-        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        type="submit"
-        disabled={isPending}
-      >
-        {isPending
-          ? type === "create"
-            ? "Creating..."
-            : "Updating..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
-      </button>
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {isPending
+            ? type === "create"
+              ? "Creating..."
+              : "Updating..."
+            : type === "create"
+            ? "Create"
+            : "Update"}
+        </button>
+      </div>
     </form>
   );
 };

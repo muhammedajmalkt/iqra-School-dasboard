@@ -2,16 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import InputField from "../InputField";
-import { type Dispatch, type SetStateAction, useEffect } from "react";
-import {
-  attendanceSchema,
-  type AttendanceSchema,
-} from "@/lib/formValidationSchemas";
 import { useFormState } from "react-dom";
-import { createAttendance, updateAttendance } from "@/lib/actions";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { toast } from "react-toastify";
+import { attendanceSchema, type AttendanceSchema } from "@/lib/formValidationSchemas";
+import { createAttendance, updateAttendance } from "@/lib/actions";
 
 const AttendanceForm = ({
   type,
@@ -21,23 +17,22 @@ const AttendanceForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: Dispatch<SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: any;
 }) => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
     control,
-    setValue,
+    formState: { errors },
   } = useForm<AttendanceSchema>({
     resolver: zodResolver(attendanceSchema),
     defaultValues: {
-      id: data?.id ?? undefined,
+      id: data?.id || "",
       date: data?.date ? new Date(data.date).toISOString().split("T")[0] : "",
-      present: data?.present ?? false,
-      studentId: data?.studentId ?? "",
-      lessonId: data?.lessonId ?? undefined,
+      present: data?.present || false,
+      studentId: data?.studentId || "",
+      lessonId: data?.lessonId || "",
     },
   });
 
@@ -50,132 +45,131 @@ const AttendanceForm = ({
     }
   );
 
+  const router = useRouter();
+  const { students = [], lessons = [] } = relatedData || {};
+
   const onSubmit = handleSubmit((formData) => {
     formAction(formData);
   });
 
-  const router = useRouter();
-
   useEffect(() => {
     if (state.success) {
-      toast(
-        `Attendance has been ${type === "create" ? "created" : "updated"}!`
-      );
+      toast.success(`Attendance has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
     }
-  }, [state, router, type, setOpen]);
-
-  const { students = [], lessons = [] } = relatedData || {};
+  }, [state, type, setOpen, router]);
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create"
-          ? "Create a new attendance"
-          : "Update the attendance"}
-      </h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Attendance" : "Update Attendance"}
+      </h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Attendance Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Date"
-          name="date"
-          type="date"
-          defaultValue={
-            data?.date ? new Date(data.date).toISOString().split("T")[0] : ""
-          }
-          register={register}
-          error={errors?.date}
-        />
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Present</label>
-          <Controller
-            name="present"
-            control={control}
-            render={({ field }) => (
-              <select
-                className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-                value={field.value ? "true" : "false"}
-                onChange={(e) => field.onChange(e.target.value === "true")}
-              >
-                <option value="true">Present</option>
-                <option value="false">Absent</option>
-              </select>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Attendance Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input
+              type="date"
+              {...register("date")}
+              className="w-full p-2 border rounded"
+              required
+            />
+            {errors.date && (
+              <p className="text-xs text-red-500 mt-1">{errors.date.message}</p>
             )}
-          />
-          {errors.present?.message && (
-            <p className="text-xs text-red-400">
-              {errors.present.message.toString()}
-            </p>
-          )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <Controller
+              name="present"
+              control={control}
+              render={({ field }) => (
+                <select
+                  className="w-full p-2 border rounded"
+                  value={field.value ? "true" : "false"}
+                  onChange={(e) => field.onChange(e.target.value === "true")}
+                >
+                  <option value="true">Present</option>
+                  <option value="false">Absent</option>
+                </select>
+              )}
+            />
+            {errors.present && (
+              <p className="text-xs text-red-500 mt-1">{errors.present.message}</p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Student</label>
-          <select
-            className="ring-[1..5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("studentId")}
-            defaultValue={data?.studentId || ""}
-          >
-            <option value="">Select Student</option>
-            {students?.map((student: { id: string; name: string }) => (
-              <option key={student.id} value={student.id}>
-                {student.name}
-              </option>
-            ))}
-          </select>
-          {errors.studentId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.studentId.message.toString()}
-            </p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Related Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Student</label>
+            <select
+              {...register("studentId")}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Select Student</option>
+              {students?.map((student: { id: string; name: string }) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+            {errors.studentId && (
+              <p className="text-xs text-red-500 mt-1">{errors.studentId.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Lesson</label>
+            <select
+              {...register("lessonId")}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">Select Lesson</option>
+              {lessons?.map((lesson: { id: number; title: string }) => (
+                <option key={lesson.id} value={lesson.id}>
+                  {lesson.title}
+                </option>
+              ))}
+            </select>
+            {errors.lessonId && (
+              <p className="text-xs text-red-500 mt-1">{errors.lessonId.message}</p>
+            )}
+          </div>
         </div>
+      </fieldset>
 
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Lesson</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("lessonId")}
-            defaultValue={data?.lessonId || ""}
-          >
-            <option value="">Select Lesson</option>
-            {lessons?.map((lesson: { id: number; title: string }) => (
-              <option key={lesson.id} value={lesson.id}>
-                {lesson.title}
-              </option>
-            ))}
-          </select>
-          {errors.lessonId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.lessonId.message.toString()}
-            </p>
-          )}
-        </div>
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-      </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
+      {data?.id && (
+        <input type="hidden" {...register("id")} />
       )}
 
-      <button className="bg-blue-400 text-white p-2 rounded-md" type="submit">
-        {type === "create" ? "Create" : "Update"}
-      </button>
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          {type === "create" ? "Create" : "Update"}
+        </button>
+      </div>
     </form>
   );
 };
