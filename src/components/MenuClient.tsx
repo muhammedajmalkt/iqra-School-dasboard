@@ -129,7 +129,7 @@ export const MenuClient = ({ role, menuItems }: Props) => {
                     sm:justify-start 
                     ${
                       active
-                        ? "sm:border-l-4 bg-blue-700/10 sm:border-blue-700 sm:rounded-none"
+                        ? "sm:border-l-4 bg-blue-700/10 sm:border-blue-700 sm:rounded-none "
                         : "text-slate-700 hover:bg-blue-100 hover:text-blue-700 rounded-none"
                     }
                   `}
