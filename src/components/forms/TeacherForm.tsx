@@ -6,7 +6,7 @@ import InputField from "../InputField";
 import Image from "next/image";
 import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
 import { teacherSchema, type TeacherSchema } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { createTeacher, updateTeacher } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -38,14 +38,14 @@ const TeacherForm = ({
     data?.subjects?.map((subject: any) => subject.id.toString()) || []
   );
 
-  const [state, formAction] = useFormState(
-    type === "create" ? createTeacher : updateTeacher,
-    {
-      success: false,
-      error: false,
-      errorMessage: "",
-    }
-  );
+const [state, formAction] = useActionState(
+  type === "create" ? createTeacher : updateTeacher,
+  {
+    success: false,
+    message: "",
+    id: "",
+  }
+);
 
   const onSubmit = handleSubmit((formData) => {
     const submitData = {
@@ -97,13 +97,18 @@ const TeacherForm = ({
   };
 
   return (
-    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide"
+    >
       <h2 className="text-xl font-semibold">
         {type === "create" ? "Create Teacher" : "Update Teacher"}
       </h2>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Authentication</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Authentication
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Username</label>
@@ -113,7 +118,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.username && (
-              <p className="text-xs text-red-500 mt-1">{errors.username.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.username.message}
+              </p>
             )}
           </div>
           <div>
@@ -124,7 +131,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.email && (
-              <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.email.message}
+              </p>
             )}
           </div>
           {type === "create" && (
@@ -136,7 +145,9 @@ const TeacherForm = ({
                 className="w-full p-2 border rounded"
               />
               {errors.password && (
-                <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.password.message}
+                </p>
               )}
             </div>
           )}
@@ -144,7 +155,9 @@ const TeacherForm = ({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Personal Information</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Personal Information
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">First Name</label>
@@ -165,7 +178,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.surname && (
-              <p className="text-xs text-red-500 mt-1">{errors.surname.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.surname.message}
+              </p>
             )}
           </div>
           <div>
@@ -176,7 +191,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.phone && (
-              <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.phone.message}
+              </p>
             )}
           </div>
           <div>
@@ -187,7 +204,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.address && (
-              <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.address.message}
+              </p>
             )}
           </div>
           <div>
@@ -198,7 +217,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.bloodType && (
-              <p className="text-xs text-red-500 mt-1">{errors.bloodType.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.bloodType.message}
+              </p>
             )}
           </div>
           <div>
@@ -214,7 +235,9 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.birthday && (
-              <p className="text-xs text-red-500 mt-1">{errors.birthday.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.birthday.message}
+              </p>
             )}
           </div>
           <div>
@@ -222,7 +245,7 @@ const TeacherForm = ({
             <select
               {...register("sex")}
               defaultValue={data?.sex}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border rounded "
             >
               <option value="">Select</option>
               <option value="MALE">Male</option>
@@ -240,7 +263,7 @@ const TeacherForm = ({
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">Subjects</legend>
-        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
+        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded scrollbar-hide">
           {subjects.map((subject: { id: number; name: string }) => (
             <label key={subject.id} className="flex items-center gap-2 text-sm">
               <input
@@ -249,14 +272,16 @@ const TeacherForm = ({
                 onChange={(e) =>
                   handleSubjectChange(subject.id.toString(), e.target.checked)
                 }
-                className="w-4 h-4"
+                className="w-4 h-4 "
               />
               {subject.name}
             </label>
           ))}
         </div>
         {selectedSubjects.length === 0 && (
-          <p className="text-sm text-red-500">Please select at least one subject</p>
+          <p className="text-sm text-red-500">
+            Please select at least one subject
+          </p>
         )}
       </fieldset>
 
