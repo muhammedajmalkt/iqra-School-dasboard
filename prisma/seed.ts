@@ -1,12 +1,32 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
+import { createClerkClient } from "@clerk/backend";
+import { config } from "dotenv";
+config();
+
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+
+async function createAdminUser() {
+  try {
+    const user = await clerk.users.createUser({
+      username: "anfaskaloor",
+      password: "SecureAdmin123!",
+      publicMetadata: { role: "admin" },
+    });
+    console.log("Admin user created:", user.id);
+  } catch (error) {
+    console.error("Error creating admin:", error);
+  }
+}
 
 async function main() {
+  await createAdminUser();
+
   // ADMIN
   await prisma.admin.create({
     data: {
       id: "1",
-      username: "admin",
+      username: "anfaskaloor",
     },
   });
 
@@ -25,7 +45,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error("seed has error:",e);
+    console.error("seed has error:", e);
     await prisma.$disconnect();
     process.exit(1);
   });

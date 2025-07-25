@@ -1,29 +1,40 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
     image: postgres:15
     container_name: postgres_db
-    environment:
-      POSTGRES_USER: iqraschool
-      POSTGRES_PASSWORD: IQra@9949
-      POSTGRES_DB: iqraschool
+    networks:
+      - iqraschool
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
 
   app:
-    build: .
+    build:
+      context: .
+      target: development # If production change this to production
     container_name: nextjs_app
     ports:
-      - '3000:3000'
+      - "3000:3000"
     restart: always
-    environment:
-      DATABASE_URL: postgresql://iqraschool:IQra@9949@postgres_db:5432/iqraschool?schema=public
-    command: sh -c "npx prisma migrate deploy && npm start"
+    networks:
+      - iqraschool
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npx prisma migrate deploy && npm run dev" # Prodution: sh -c "npx prisma migrate deploy && npm start"
     depends_on:
       - postgres
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
+
+networks:
+  iqraschool:
+    driver: bridge
