@@ -1,7 +1,93 @@
 import { Day, PrismaClient, UserSex } from "@prisma/client";
 const prisma = new PrismaClient();
 
+
+
+//Fees
+async function seedFeeTypes() {
+  
+  const feeTypes = [
+    {
+      name: "Tuition Fee",
+      description: "Monthly tuition fee for academic classes",
+      defaultAmount: 5000,
+      isActive: true
+    },
+    {
+      name: "Registration Fee",
+      description: "One-time registration fee for new admissions",
+      defaultAmount: 2000,
+      isActive: true
+    },
+    {
+      name: "Examination Fee",
+      description: "Semester and annual examination fee",
+      defaultAmount: 1500,
+      isActive: true
+    },
+    {
+      name: "Library Fee",
+      description: "Library access and book rental fee",
+      defaultAmount: 500,
+      isActive: true
+    },
+    {
+      name: "Laboratory Fee",
+      description: "Science and computer lab usage fee",
+      defaultAmount: 1000,
+      isActive: true
+    },
+    {
+      name: "Sports Fee",
+      description: "Sports activities and equipment fee",
+      defaultAmount: 800,
+      isActive: true
+    },
+    {
+      name: "Transport Fee",
+      description: "School bus transportation fee",
+      defaultAmount: 3000,
+      isActive: true
+    },
+    {
+      name: "Activity Fee",
+      description: "Extracurricular activities and events",
+      defaultAmount: 1200,
+      isActive: true
+    },
+    {
+      name: "Development Fee",
+      description: "Infrastructure development and maintenance",
+      defaultAmount: 2500,
+      isActive: true
+    },
+    {
+      name: "Miscellaneous Fee",
+      description: "Other charges and miscellaneous expenses",
+      defaultAmount: 500,
+      isActive: true
+    }
+  ];
+
+  for (const feeType of feeTypes) {
+    await prisma.feeType.upsert({
+      where: { name: feeType.name },
+      update: {
+        description: feeType.description,
+        defaultAmount: feeType.defaultAmount,
+        isActive: feeType.isActive
+      },
+      create: feeType
+    });
+  }
+
+}
+
+
+
 async function main() {
+   await seedFeeTypes()
+
   // ADMIN
   await prisma.admin.create({
     data: {
@@ -200,6 +286,7 @@ async function main() {
       },
     });
   }
+
 
   console.log("Seeding completed successfully.");
 }

@@ -13,7 +13,9 @@ import {
   deleteStudent,
   deleteSubject,
   deleteTeacher,
+  deleteFee,
 } from "@/lib/actions";
+
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -32,22 +34,7 @@ import DeleteConfirmation from "./confirmModal";
 import FormLoadingSkeleton from "./FormLoadingSkeleton";
 import LoadingSpinner from "./LoadingSpinner";
 
-const deleteActionMap = {
-  subject: deleteSubject,
-  class: deleteClass,
-  teacher: deleteTeacher,
-  student: deleteStudent,
-  exam: deleteExam,
-  parent: deleteParent,
-  lesson: deleteLesson,
-  assignment: deleteAssignment,
-  result: deleteResult,
-  attendance: deleteAttendance,
-  event: deleteEvent,
-  announcement: deleteAnnouncement,
-  teacherAttendance: deleteAnnouncement,
-};
-
+// Dynamic Imports
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
   loading: () => <FormLoadingSkeleton formType="teacher" />,
   ssr: false,
@@ -103,7 +90,30 @@ const EventForm = dynamic(() => import("./forms/EventForm"), {
   loading: () => <FormLoadingSkeleton formType="event" />,
   ssr: false,
 });
+const FeeForm = dynamic(() => import("./forms/FeeForm"), {
+  loading: () => <FormLoadingSkeleton formType="fee" />,
+  ssr: false,
+});
 
+// Delete actions mapping
+const deleteActionMap = {
+  subject: deleteSubject,
+  class: deleteClass,
+  teacher: deleteTeacher,
+  student: deleteStudent,
+  exam: deleteExam,
+  parent: deleteParent,
+  lesson: deleteLesson,
+  assignment: deleteAssignment,
+  result: deleteResult,
+  attendance: deleteAttendance,
+  event: deleteEvent,
+  announcement: deleteAnnouncement,
+  teacherAttendance: deleteAnnouncement,
+  fee: deleteFee,
+};
+
+// Forms mapping
 const forms: {
   [key: string]: (
     setOpen: Dispatch<SetStateAction<boolean>>,
@@ -113,108 +123,46 @@ const forms: {
   ) => JSX.Element;
 } = {
   subject: (setOpen, type, data, relatedData) => (
-    <SubjectForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <SubjectForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   class: (setOpen, type, data, relatedData) => (
-    <ClassForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <ClassForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   teacher: (setOpen, type, data, relatedData) => (
-    <TeacherForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <TeacherForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   student: (setOpen, type, data, relatedData) => (
-    <StudentForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <StudentForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   exam: (setOpen, type, data, relatedData) => (
-    <ExamForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <ExamForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   parent: (setOpen, type, data, relatedData) => (
-    <ParentForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <ParentForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   lesson: (setOpen, type, data, relatedData) => (
-    <LessonForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <LessonForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   announcement: (setOpen, type, data, relatedData) => (
-    <AnnouncementForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <AnnouncementForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   assignment: (setOpen, type, data, relatedData) => (
-    <AssignmentForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <AssignmentForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   result: (setOpen, type, data, relatedData) => (
-    <ResultForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <ResultForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   attendance: (setOpen, type, data, relatedData) => (
-    <AttendanceForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <AttendanceForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   teacherAttendance: (setOpen, type, data, relatedData) => (
-    <TeacherAttendanceForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <TeacherAttendanceForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
   event: (setOpen, type, data, relatedData) => (
-    <EventForm
-      type={type}
-      data={data}
-      setOpen={setOpen}
-      relatedData={relatedData}
-    />
+    <EventForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
+  ),
+  fee: (setOpen, type, data, relatedData) => (
+    <FeeForm type={type} data={data} setOpen={setOpen} relatedData={relatedData} />
   ),
 };
 
@@ -228,6 +176,7 @@ const FormModal = ({
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
   const bgColor =
     type === "create"
+
       ? "bg-lamaYellow"
       : type === "update"
       ? "bg-lamaSky"
@@ -254,10 +203,8 @@ const FormModal = ({
     }, [state.success]);
 
     useEffect(() => {
-      if (state.error) {
-        if (state.errorMessage) {
-          toast.error(state.errorMessage);
-        }
+      if (state.error && state.errorMessage) {
+        toast.error(state.errorMessage);
       }
     }, [state.error, state.errorMessage]);
 
@@ -269,16 +216,12 @@ const FormModal = ({
           formAction={formAction}
           isPending={isPending}
           setOpen={setOpen}
-          // Optional: customize messages
-          // customMessage="Are you sure you want to remove this exam permanently?"
-          // customWarning="This will affect all students who have taken this exam."
         />
       );
     }
 
     if (type === "create" || type === "update") {
       const FormComponent = forms[table];
-
       return FormComponent ? (
         FormComponent(setOpen, type, data, relatedData)
       ) : (
@@ -327,7 +270,6 @@ const FormModal = ({
     };
   }, [open]);
 
-  // Handle form loading state
   const handleModalOpen = () => {
     setOpen(true);
     setIsFormLoading(true);
