@@ -152,7 +152,7 @@ export const MenuClient = ({ role, menuItems }: Props) => {
                     hidden sm:block font-medium transition-all duration-200
                     ${
                       active
-                        ? "text-blue-700 font-semibold drop-shadow-sm"
+                        ? "text-blue-800 font-semibold drop-shadow-sm"
                         : "group-hover:font-semibold"
                     }
                   `}>

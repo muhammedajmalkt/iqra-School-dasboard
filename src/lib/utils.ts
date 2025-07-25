@@ -154,7 +154,160 @@ export const createErrorMessage = (
     const clerkError = err as ClerkError;
     const firstError = clerkError.errors[0];
 
-    errorMessage = firstError?.message || errorMessage;
+    if (firstError && typeof firstError === "object" && "code" in firstError) {
+      const errorCode = (firstError as any).code;
+      switch (errorCode) {
+        // Authentication errors
+        case "authentication_invalid":
+          errorMessage = "Invalid authentication credentials.";
+          break;
+        case "session_token_invalid":
+          errorMessage = "Your session has expired. Please sign in again.";
+          break;
+        case "session_token_not_provided":
+          errorMessage = "Authentication required. Please sign in.";
+          break;
+        case "session_revoked":
+          errorMessage = "Your session has been revoked. Please sign in again.";
+          break;
+        case "session_token_and_uat_claim_check_failed":
+          errorMessage = "Session verification failed. Please sign in again.";
+          break;
+
+        // Sign up errors
+        case "form_identifier_exists":
+          errorMessage = "An account with this email already exists.";
+          break;
+        case "form_password_pwned":
+          errorMessage =
+            "This password has been found in a data breach. Please choose a different password.";
+          break;
+        case "form_password_length_too_short":
+          errorMessage =
+            "Password is too short. Please use at least 8 characters.";
+          break;
+        case "form_password_not_strong_enough":
+          errorMessage =
+            "Password is not strong enough. Please include uppercase, lowercase, numbers, and special characters.";
+          break;
+        case "form_username_invalid_character":
+          errorMessage =
+            "Username contains invalid characters. Use only letters, numbers, and underscores.";
+          break;
+        case "form_username_invalid_length":
+          errorMessage = "Username must be between 3 and 20 characters long.";
+          break;
+
+        // Sign in errors
+        case "form_identifier_not_found":
+          errorMessage = "No account found with this email address.";
+          break;
+        case "form_password_incorrect":
+          errorMessage = "Incorrect password. Please try again.";
+          break;
+        case "form_code_incorrect":
+          errorMessage = "Invalid verification code. Please try again.";
+          break;
+        case "verification_link_expired":
+          errorMessage =
+            "Verification link has expired. Please request a new one.";
+          break;
+        case "verification_failed":
+          errorMessage = "Verification failed. Please try again.";
+          break;
+
+        // Rate limiting
+        case "too_many_requests":
+          errorMessage =
+            "Too many attempts. Please wait a moment before trying again.";
+          break;
+        case "identifier_already_signed_in":
+          errorMessage = "You are already signed in with this account.";
+          break;
+
+        // Email/Phone verification errors
+        case "form_param_format_invalid":
+          errorMessage = "Invalid email or phone number format.";
+          break;
+        case "verification_expired":
+          errorMessage =
+            "Verification code has expired. Please request a new one.";
+          break;
+
+        // OAuth errors
+        case "oauth_access_denied":
+          errorMessage = "Access was denied. Please try signing in again.";
+          break;
+        case "oauth_email_domain_reserved_by_saml":
+          errorMessage =
+            "This email domain is managed by your organization. Please use SSO to sign in.";
+          break;
+
+        // Organization errors
+        case "not_allowed_access":
+          errorMessage =
+            "You don't have permission to access this organization.";
+          break;
+        case "authorization_invalid":
+          errorMessage = "You don't have permission to perform this action.";
+          break;
+
+        // Two-factor authentication errors
+        case "form_2fa_code_invalid":
+          errorMessage = "Invalid two-factor authentication code.";
+          break;
+        case "form_backup_code_invalid":
+          errorMessage = "Invalid backup code. Please try again.";
+          break;
+
+        // Account locked/banned
+        case "user_locked":
+          errorMessage =
+            "Your account has been temporarily locked. Please contact support.";
+          break;
+        case "user_banned":
+          errorMessage =
+            "Your account has been suspended. Please contact support.";
+          break;
+
+        // Generic validation errors
+        case "form_param_nil":
+          errorMessage =
+            "Required field is missing. Please fill in all required information.";
+          break;
+        case "form_param_unknown":
+          errorMessage = "Unknown parameter provided.";
+          break;
+        case "form_param_max_length_exceeded":
+          errorMessage = "Input is too long. Please shorten your entry.";
+          break;
+
+        // API/Client errors
+        case "client_invalid":
+          errorMessage =
+            "Invalid client configuration. Please contact support.";
+          break;
+        case "environment_not_found":
+          errorMessage =
+            "Environment configuration error. Please contact support.";
+          break;
+
+        // Invitation errors
+        case "invitation_invalid":
+          errorMessage = "This invitation is invalid or has expired.";
+          break;
+        case "invitation_expired":
+          errorMessage =
+            "This invitation has expired. Please request a new one.";
+          break;
+
+        default:
+          errorMessage = firstError.message || "Authentication error occurred.";
+          break;
+      }
+    } else {
+      errorMessage = firstError?.message || errorMessage;
+    }
   } else if (
     typeof err === "object" &&
     err !== null &&

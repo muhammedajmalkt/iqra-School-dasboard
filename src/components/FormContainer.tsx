@@ -16,13 +16,14 @@ export type FormContainerProps = {
     | "attendance"
     | "teacherAttendance"
     | "event"
-    | "announcement";
+    | "announcement"
+    | "fee"
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
 };
 
-const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
+const FormContainer = async ({ table, type, data, id  }: FormContainerProps) => {
   let relatedData = {};
 
   const user = await currentUser();
