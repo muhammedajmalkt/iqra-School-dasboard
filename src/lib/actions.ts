@@ -4,6 +4,8 @@ import prisma from "./prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import {
   EventSchema,
+  feeSchema,
+  FeeSchema,
   teacherAttendanceSchema,
   type AnnouncementSchema,
   type AssignmentSchema,
@@ -19,9 +21,266 @@ import {
 } from "./formValidationSchemas";
 import { createErrorMessage } from "./utils";
 import z from "zod";
+import { revalidatePath } from "next/cache";
 
 type CurrentState = { success: boolean; error: boolean; errorMessage?: string };
 
+// FEE ACTIONS
+export const createFee = async (
+  currentState: { success: boolean; error: boolean; errorMessage?: string },
+  data: FeeSchema
+) => {
+  const { userId, sessionClaims } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+
+  // Only admin and teachers can create fees
+  if (role !== "admin" && role !== "teacher") {
+    return { success: false, error: true, errorMessage: "Unauthorized!" };
+  }
+
+  try {
+    const validatedData = feeSchema.parse(data);
+
+    // Check if student exists
+    const student = await prisma.student.findUnique({
+      where: { id: validatedData.studentId },
+    });
+
+    if (!student) {
+      return { success: false, error: true, errorMessage: "Student not found!" };
+    }
+
+    // Check if fee type exists
+    const feeType = await prisma.feeType.findUnique({
+      where: { id: validatedData.feeTypeId },
+    });
+
+    if (!feeType) {
+      return { success: false, error: true, errorMessage: "Fee type not found!" };
+    }
+
+    // Check for duplicate fee (same student, fee type, academic year, semester)
+    const existingFee = await prisma.fee.findFirst({
+      where: {
+        studentId: validatedData.studentId,
+        feeTypeId: validatedData.feeTypeId,
+        academicYear: validatedData.academicYear,
+        semester: validatedData.semester,
+      },
+    });
+
+    if (existingFee) {
+      return { 
+        success: false, 
+        error: true, 
+        errorMessage: "Fee already exists for this student, fee type, and academic period!" 
+      };
+    }
+
+    // Prepare fee data
+    const feeData: any = {
+      studentId: validatedData.studentId,
+      feeTypeId: validatedData.feeTypeId,
+      amount: validatedData.amount,
+      dueDate: new Date(validatedData.dueDate),
+      academicYear: validatedData.academicYear,
+      semester: validatedData.semester,
+      description: validatedData.description || null,
+      status: validatedData.status,
+    };
+
+    // Add payment details if status is paid or partial
+    if (validatedData.status === "paid" || validatedData.status === "partial") {
+      if (validatedData.paidAmount) {
+        feeData.paidAmount = validatedData.paidAmount;
+      }
+      if (validatedData.paidDate) {
+        feeData.paidDate = new Date(validatedData.paidDate);
+      }
+      if (validatedData.paymentMethod) {
+        feeData.paymentMethod = validatedData.paymentMethod;
+      }
+      if (validatedData.transactionId) {
+        feeData.transactionId = validatedData.transactionId;
+      }
+    }
+
+    await prisma.fee.create({
+      data: feeData,
+    });
+
+    revalidatePath("/list/finance");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Error creating fee:", err);
+    return { 
+      success: false, 
+      error: true, 
+      errorMessage: err instanceof Error ? err.message : "Something went wrong!" 
+    };
+  }
+};
+
+export const updateFee = async (
+  currentState: { success: boolean; error: boolean; errorMessage?: string },
+  data: FeeSchema
+) => {
+  const { userId, sessionClaims } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+
+  // Only admin and teachers can update fees
+  if (role !== "admin" && role !== "teacher") {
+    return { success: false, error: true, errorMessage: "Unauthorized!" };
+  }
+
+  try {
+    const validatedData = feeSchema.parse(data);
+
+    if (!validatedData.id) {
+      return { success: false, error: true, errorMessage: "Fee ID is required!" };
+    }
+
+    // Check if fee exists
+    const existingFee = await prisma.fee.findUnique({
+      where: { id: validatedData.id },
+    });
+
+    if (!existingFee) {
+      return { success: false, error: true, errorMessage: "Fee not found!" };
+    }
+
+    // Check if student exists
+    const student = await prisma.student.findUnique({
+      where: { id: validatedData.studentId },
+    });
+
+    if (!student) {
+      return { success: false, error: true, errorMessage: "Student not found!" };
+    }
+
+    // Check if fee type exists
+    const feeType = await prisma.feeType.findUnique({
+      where: { id: validatedData.feeTypeId },
+    });
+
+    if (!feeType) {
+      return { success: false, error: true, errorMessage: "Fee type not found!" };
+    }
+
+    // Check for duplicate fee (only if changing key fields)
+    if (
+      existingFee.studentId !== validatedData.studentId ||
+      existingFee.feeTypeId !== validatedData.feeTypeId ||
+      existingFee.academicYear !== validatedData.academicYear ||
+      existingFee.semester !== validatedData.semester
+    ) {
+      const duplicateFee = await prisma.fee.findFirst({
+        where: {
+          studentId: validatedData.studentId,
+          feeTypeId: validatedData.feeTypeId,
+          academicYear: validatedData.academicYear,
+          semester: validatedData.semester,
+          id: { not: validatedData.id },
+        },
+      });
+
+      if (duplicateFee) {
+        return { 
+          success: false, 
+          error: true, 
+          errorMessage: "Another fee already exists for this student, fee type, and academic period!" 
+        };
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      studentId: validatedData.studentId,
+      feeTypeId: validatedData.feeTypeId,
+      amount: validatedData.amount,
+      dueDate: new Date(validatedData.dueDate),
+      academicYear: validatedData.academicYear,
+      semester: validatedData.semester,
+      description: validatedData.description || null,
+      status: validatedData.status,
+    };
+
+    // Handle payment details based on status
+    if (validatedData.status === "paid" || validatedData.status === "partial") {
+      if (validatedData.paidAmount) {
+        updateData.paidAmount = validatedData.paidAmount;
+      }
+      if (validatedData.paidDate) {
+        updateData.paidDate = new Date(validatedData.paidDate);
+      }
+      if (validatedData.paymentMethod) {
+        updateData.paymentMethod = validatedData.paymentMethod;
+      }
+      if (validatedData.transactionId) {
+        updateData.transactionId = validatedData.transactionId;
+      }
+    } else {
+      // Clear payment details if status is not paid or partial
+      updateData.paidAmount = null;
+      updateData.paidDate = null;
+      updateData.paymentMethod = null;
+      updateData.transactionId = null;
+    }
+
+    await prisma.fee.update({
+      where: { id: validatedData.id },
+      data: updateData,
+    });
+
+    revalidatePath("/list/finance");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Error updating fee:", err);
+    return { 
+      success: false, 
+      error: true, 
+      errorMessage: err instanceof Error ? err.message : "Something went wrong!" 
+    };
+  }
+};
+
+export const deleteFee = async (
+  currentState: { success: boolean; error: boolean },
+  data: FormData
+) => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
+
+  // Only admin and teachers can delete fees
+  if (role !== "admin" && role !== "teacher") {
+    return { success: false, error: true };
+  }
+
+  const id = data.get("id") as string;
+
+  try {
+    // Check if fee exists
+    const existingFee = await prisma.fee.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!existingFee) {
+      return { success: false, error: true };
+    }
+
+    await prisma.fee.delete({
+      where: { id: parseInt(id) },
+    });
+
+    revalidatePath("/list/finance");
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Error deleting fee:", err);
+    return { success: false, error: true };
+  }
+};
+
+// TEACHER ACTIONS
 export const createTeacher = async (
   currentState: CurrentState,
   data: TeacherSchema
@@ -64,7 +323,7 @@ export const createTeacher = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {    
+  } catch (err: any) {
     // If Prisma failed but Clerk user was created, clean up
     if (user) {
       try {
@@ -188,6 +447,138 @@ export const deleteTeacher = async (
   }
 };
 
+// STUDENT ACTIONS
+export const createStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  let user;
+  console.log("create student:", data);
+  try {
+    const clerk = await clerkClient();
+
+    user = await clerk.users.createUser({
+      username: data.username,
+      password: data.password,
+      firstName: data.name,
+      lastName: data.surname,
+      emailAddress: data.email ? [data.email] : [],
+      publicMetadata: { role: "student" },
+    });
+
+    await prisma.student.create({
+      data: {
+        id: user.id,
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        classId: data.classId,
+        gradeId: data.gradeId,
+        parentId: data.parentId,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    if (user) {
+      try {
+        const clerk = await clerkClient();
+        await clerk.users.deleteUser(user.id);
+      } catch (cleanupError) {
+        console.error("Failed to rollback Clerk user:", cleanupError);
+      }
+    }
+
+    const errorMessage = createErrorMessage(err);
+    console.log("errorMessage:", errorMessage);
+    return { success: false, error: true, errorMessage };
+  }
+};
+
+export const updateStudent = async (
+  currentState: CurrentState,
+  data: StudentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true };
+  }
+
+  try {
+    const clerk = await clerkClient();
+
+    // Update Clerk user
+    await clerk.users.updateUser(data.id, {
+      username: data.username,
+      ...(data.password !== "" && { password: data.password }),
+      firstName: data.name,
+      lastName: data.surname,
+    });
+
+    // Update email in Clerk if provided
+    if (data.email) {
+      try {
+        const user = await clerk.users.getUser(data.id);
+        const primaryEmail = user.emailAddresses.find(
+          (email) => email.id === user.primaryEmailAddressId
+        );
+
+        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
+          const newEmailAddress = await clerk.emailAddresses.createEmailAddress(
+            {
+              userId: data.id,
+              emailAddress: data.email,
+              verified: true,
+            }
+          );
+
+          await clerk.users.updateUser(data.id, {
+            primaryEmailAddressID: newEmailAddress.id,
+          });
+
+          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
+        }
+      } catch (emailError) {
+        console.log("Email update error:", emailError);
+      }
+    }
+
+    // Update in Prisma DB
+    await prisma.student.update({
+      where: {
+        id: data.id,
+      },
+      data: {
+        username: data.username,
+        name: data.name,
+        surname: data.surname,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        parentId: data.parentId,
+        classId: Number(data.classId),
+        gradeId: Number(data.gradeId),
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err) {
+    console.error("Student update failed:", err);
+    const errorMessage = createErrorMessage(err); // Optional
+    return { success: false, error: true, errorMessage };
+  }
+};
+
 export const deleteStudent = async (
   currentState: CurrentState,
   data: FormData
@@ -210,21 +601,7 @@ export const deleteStudent = async (
   }
 };
 
-export const deleteSubject = async (
-  currentState: CurrentState,
-  data: FormData
-): Promise<CurrentState> => {
-  try {
-    const id = Number(data.get("id"));
-
-    await prisma.subject.delete({ where: { id } });
-    return { success: true, error: false };
-  } catch (error) {
-    console.log(error);
-    return { success: false, error: true };
-  }
-};
-
+// PARENT ACTIONS
 export const createParent = async (
   currentState: CurrentState,
   data: ParentSchema
@@ -357,8 +734,6 @@ export const deleteParent = async (
       },
     });
 
-    // Revalidate parent list page
-
     return { success: true, error: false };
   } catch (err) {
     console.error("Parent deletion failed:", err);
@@ -367,137 +742,7 @@ export const deleteParent = async (
   }
 };
 
-export const createStudent = async (
-  currentState: CurrentState,
-  data: StudentSchema
-): Promise<CurrentState> => {
-  let user;
-  console.log("create student:", data);
-  try {
-    const clerk = await clerkClient();
-
-    user = await clerk.users.createUser({
-      username: data.username,
-      password: data.password,
-      firstName: data.name,
-      lastName: data.surname,
-      emailAddress: data.email ? [data.email] : [],
-      publicMetadata: { role: "student" },
-    });
-
-    await prisma.student.create({
-      data: {
-        id: user.id,
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        bloodType: data.bloodType,
-        sex: data.sex,
-        birthday: data.birthday,
-        classId: data.classId,
-        gradeId: data.gradeId,
-        parentId: data.parentId,
-      },
-    });
-
-    return { success: true, error: false };
-  } catch (err: any) {
-    if (user) {
-      try {
-        const clerk = await clerkClient();
-        await clerk.users.deleteUser(user.id);
-      } catch (cleanupError) {
-        console.error("Failed to rollback Clerk user:", cleanupError);
-      }
-    }
-
-    const errorMessage = createErrorMessage(err);
-    console.log("errorMessage:", errorMessage);
-    return { success: false, error: true, errorMessage };
-  }
-};
-
-export const updateStudent = async (
-  currentState: CurrentState,
-  data: StudentSchema
-): Promise<CurrentState> => {
-  if (!data.id) {
-    return { success: false, error: true };
-  }
-
-  try {
-    const clerk = await clerkClient();
-
-    // Update Clerk user
-    await clerk.users.updateUser(data.id, {
-      username: data.username,
-      ...(data.password !== "" && { password: data.password }),
-      firstName: data.name,
-      lastName: data.surname,
-    });
-
-    // Update email in Clerk if provided
-    if (data.email) {
-      try {
-        const user = await clerk.users.getUser(data.id);
-        const primaryEmail = user.emailAddresses.find(
-          (email) => email.id === user.primaryEmailAddressId
-        );
-
-        if (primaryEmail && primaryEmail.emailAddress !== data.email) {
-          const newEmailAddress = await clerk.emailAddresses.createEmailAddress(
-            {
-              userId: data.id,
-              emailAddress: data.email,
-              verified: true,
-            }
-          );
-
-          await clerk.users.updateUser(data.id, {
-            primaryEmailAddressID: newEmailAddress.id,
-          });
-
-          await clerk.emailAddresses.deleteEmailAddress(primaryEmail.id);
-        }
-      } catch (emailError) {
-        console.log("Email update error:", emailError);
-      }
-    }
-
-    // Update in Prisma DB
-    await prisma.student.update({
-      where: {
-        id: data.id,
-      },
-      data: {
-        username: data.username,
-        name: data.name,
-        surname: data.surname,
-        email: data.email || null,
-        phone: data.phone || null,
-        address: data.address,
-        img: data.img || null,
-        bloodType: data.bloodType,
-        sex: data.sex,
-        birthday: data.birthday,
-        parentId: data.parentId,
-        classId: Number(data.classId),
-        gradeId: Number(data.gradeId),
-      },
-    });
-
-    return { success: true, error: false };
-  } catch (err) {
-    console.error("Student update failed:", err);
-    const errorMessage = createErrorMessage(err); // Optional
-    return { success: false, error: true, errorMessage };
-  }
-};
-
+// SUBJECT ACTIONS
 export const createSubject = async (
   currentState: CurrentState,
   data: SubjectSchema
@@ -559,6 +804,22 @@ export const updateSubject = async (
   }
 };
 
+export const deleteSubject = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  try {
+    const id = Number(data.get("id"));
+
+    await prisma.subject.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (error) {
+    console.log(error);
+    return { success: false, error: true };
+  }
+};
+
+// CLASS ACTIONS
 export const createClass = async (
   currentState: CurrentState,
   data: ClassSchema
@@ -631,6 +892,7 @@ export const deleteClass = async (
   }
 };
 
+// EXAM ACTIONS
 export const createExam = async (
   currentState: CurrentState,
   data: ExamSchema
@@ -703,6 +965,7 @@ export const deleteExam = async (
   }
 };
 
+// LESSON ACTIONS
 export const createLesson = async (
   currentState: CurrentState,
   data: LessonSchema
@@ -778,6 +1041,7 @@ export const deleteLesson = async (
   }
 };
 
+// ANNOUNCEMENT ACTIONS
 export const createAnnouncement = async (
   currentState: CurrentState,
   data: AnnouncementSchema
@@ -868,6 +1132,7 @@ export const deleteAnnouncement = async (
   }
 };
 
+// ASSIGNMENT ACTIONS
 export const createAssignment = async (
   currentState: CurrentState,
   data: AssignmentSchema
@@ -936,6 +1201,7 @@ export const deleteAssignment = async (
   }
 };
 
+// RESULT ACTIONS
 export const createResult = async (
   currentState: CurrentState,
   data: ResultSchema
@@ -1005,6 +1271,7 @@ export const deleteResult = async (
   }
 };
 
+// ATTENDANCE ACTIONS
 export const createAttendance = async (
   currentState: CurrentState,
   data: AttendanceSchema
@@ -1111,6 +1378,7 @@ export const createAttendances = async (
   }
 };
 
+// EVENT ACTIONS
 export const createEvent = async (
   currentState: CurrentState,
   data: EventSchema
@@ -1185,6 +1453,7 @@ export const deleteEvent = async (
   }
 };
 
+// UTILITY FUNCTIONS
 export async function markAnnouncementAsViewed(
   userId: string,
   announcementId: number

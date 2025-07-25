@@ -78,6 +78,12 @@ const menuItems = [
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
+        icon: "/finance.png",
+        label: "Fees",
+        href: "/list/fees",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
         icon: "/announcement.png",
         label: "Announcements",
         href: "/list/announcements",
@@ -89,11 +95,11 @@ const menuItems = [
         href: "/list/messages",
         visible: ["admin", "teacher", "student", "parent"],
       },
+
     ],
   },
 ];
 
-// Client component to handle pathname
 
 
 const Menu = async () => {
