@@ -64,7 +64,7 @@ export const createTeacher = async (
     });
 
     return { success: true, error: false };
-  } catch (err: any) {
+  } catch (err: any) {    
     // If Prisma failed but Clerk user was created, clean up
     if (user) {
       try {

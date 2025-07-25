@@ -1,14 +1,7 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useActionState, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { toast } from "react-toastify";
-import InputField from "../InputField";
-import { parentSchema, type ParentSchema } from "@/lib/formValidationSchemas";
-import { createParent, updateParent } from "@/lib/actions";
 
 const ParentForm = ({
   type,
@@ -18,161 +11,169 @@ const ParentForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: (open: boolean) => void;
   relatedData?: any;
 }) => {
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<ParentSchema>({
-    resolver: zodResolver(parentSchema),
+  const [formData, setFormData] = useState({
+    username: data?.username || "",
+    email: data?.email || "",
+    password: "",
+    name: data?.name || "",
+    surname: data?.surname || "",
+    phone: data?.phone || "",
+    address: data?.address || "",
+    id: data?.id || "",
   });
 
-  const [state, formAction] = useActionState(
-    type === "create" ? createParent : updateParent,
-    {
-      success: false,
-      error: false,
-      errorMessage: "",
-    }
-  );
-
-  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
 
-  const onSubmit = handleSubmit((formData) => {
-    const submitData = {
-      ...formData,
-    };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    startTransition(() => {
-      formAction(submitData);
-    });
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  useEffect(() => {
-    if (state.success) {
-      toast(`Parent has been ${type === "create" ? "created" : "updated"}!`);
+    try {
+      const response = await fetch(
+        type === "create" ? "/api/parents" : `/api/parents/${data.id}`,
+        {
+          method: type === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      if (!response.ok) throw new Error(await response.text());
+
       setOpen(false);
       router.refresh();
+      alert(`Parent ${type === "create" ? "created" : "updated"} successfully!`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
-  }, [state, type, setOpen, router]);
-
-  useEffect(() => {
-    if (type === "update" && data) {
-      setValue("username", data.username);
-      setValue("name", data.name);
-      setValue("surname", data.surname);
-      setValue("email", data.email);
-      setValue("phone", data.phone);
-      setValue("address", data.address);
-      if (data.id) {
-        setValue("id", data.id);
-      }
-    }
-  }, [data, setValue, type]);
+  };
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">
-        {type === "create" ? "Create a new parent" : "Update the parent"}
-      </h1>
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">
+        {type === "create" ? "Create Parent" : "Update Parent"}
+      </h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Authentication Information
-      </span>
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Authentication</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Username</label>
+            <input
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          {type === "create" && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Password</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                required
+              />
+            </div>
+          )}
+        </div>
+      </fieldset>
 
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Username"
-          name="username"
-          defaultValue={data?.username}
-          register={register}
-          error={errors?.username}
-        />
-        <InputField
-          label="Email"
-          name="email"
-          defaultValue={data?.email}
-          register={register}
-          error={errors?.email}
-        />
-        <InputField
-          label="Password"
-          name="password"
-          type="password"
-          defaultValue=""
-          register={register}
-          error={errors?.password}
-        />
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Personal Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">First Name</label>
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Last Name</label>
+            <input
+              name="surname"
+              value={formData.surname}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Phone</label>
+            <input
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Address</label>
+            <input
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          {data?.id && (
+            <input type="hidden" name="id" value={formData.id} />
+          )}
+        </div>
+      </fieldset>
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        >
+          {isLoading
+            ? type === "create" ? "Creating..." : "Updating..."
+            : type === "create" ? "Create" : "Update"}
+        </button>
       </div>
-
-      <span className="text-xs text-gray-400 font-medium">
-        Personal Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="First Name"
-          name="name"
-          defaultValue={data?.name}
-          register={register}
-          error={errors.name}
-        />
-        <InputField
-          label="Last Name"
-          name="surname"
-          defaultValue={data?.surname}
-          register={register}
-          error={errors.surname}
-        />
-        <InputField
-          label="Phone"
-          name="phone"
-          defaultValue={data?.phone}
-          register={register}
-          error={errors.phone}
-        />
-        <InputField
-          label="Address"
-          name="address"
-          defaultValue={data?.address}
-          register={register}
-          error={errors.address}
-        />
-
-        {data && (
-          <InputField
-            label="Id"
-            name="id"
-            defaultValue={data?.id}
-            register={register}
-            error={errors?.id}
-            hidden
-          />
-        )}
-      </div>
-
-      {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
-      )}
-
-      <button
-        className="bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        type="submit"
-        disabled={isPending}
-      >
-        {isPending
-          ? type === "create"
-            ? "Creating..."
-            : "Updating..."
-          : type === "create"
-          ? "Create"
-          : "Update"}
-      </button>
     </form>
   );
 };
