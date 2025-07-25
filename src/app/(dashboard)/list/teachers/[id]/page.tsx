@@ -173,25 +173,25 @@ const SingleTeacherPage = async ({
               href={`/list/classes?supervisorId=${teacher.id}`}
               className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3 text-blue-700"
             >
-              <span className="text-sm font-medium">Teacher's Classes</span>
+              <span className="text-sm font-medium">Teacher&apos;s Classes</span>
             </Link>
             <Link
               href={`/list/students?teacherId=${teacher.id}`}
               className="p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors flex items-center gap-3 text-purple-700"
             >
-              <span className="text-sm font-medium">Teacher's Students</span>
+              <span className="text-sm font-medium">Teacher&apos;s Students</span>
             </Link>
             <Link
               href={`/list/lessons?teacherId=${teacher.id}`}
               className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors flex items-center gap-3 text-green-700"
             >
-              <span className="text-sm font-medium">Teacher's Lessons</span>
+              <span className="text-sm font-medium">Teacher&apos;s Lessons</span>
             </Link>
             <Link
               href={`/list/exams?teacherId=${teacher.id}`}
               className="p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors flex items-center gap-3 text-yellow-700"
             >
-              <span className="text-sm font-medium">Teacher's Exams</span>
+              <span className="text-sm font-medium">Teacher&apos;s Exams</span>
             </Link>
           </div>
         </div>

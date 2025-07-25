@@ -10,7 +10,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import ChatInterface from "@/components/ChatInterface";
-import { useState, useEffect } from "react";
 
 // TYPES
 type MessageList = Message & {

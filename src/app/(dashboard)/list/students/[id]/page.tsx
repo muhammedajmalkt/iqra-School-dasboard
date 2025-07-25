@@ -170,31 +170,31 @@ const SingleStudentPage = async ({
               href={`/list/lessons?classId=${student.class.id}`}
               className="p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-3 text-blue-700"
             >
-              <span className="text-sm font-medium">Student's Lessons</span>
+              <span className="text-sm font-medium">Student&apos;s Lessons</span>
             </Link>
             <Link
               href={`/list/teachers?classId=${student.class.id}`}
               className="p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors flex items-center gap-3 text-purple-700"
             >
-              <span className="text-sm font-medium">Student's Teachers</span>
+              <span className="text-sm font-medium">Student&apos;s Teachers</span>
             </Link>
             <Link
               href={`/list/exams?classId=${student.class.id}`}
               className="p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors flex items-center gap-3 text-green-700"
             >
-              <span className="text-sm font-medium">Student's Exams</span>
+              <span className="text-sm font-medium">Student&apos;s Exams</span>
             </Link>
             <Link
               href={`/list/assignments?classId=${student.class.id}`}
               className="p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors flex items-center gap-3 text-yellow-700"
             >
-              <span className="text-sm font-medium">Student's Assignments</span>
+              <span className="text-sm font-medium">Student&apos;s Assignments</span>
             </Link>
             <Link
               href={`/list/results?studentId=${student.id}`}
               className="p-3 rounded-lg bg-pink-50 hover:bg-pink-100 transition-colors flex items-center gap-3 text-pink-700"
             >
-              <span className="text-sm font-medium">Student's Results</span>
+              <span className="text-sm font-medium">Student&apos;s Results</span>
             </Link>
           </div>
         </div>
