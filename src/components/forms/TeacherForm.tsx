@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import InputField from "../InputField";
+import Image from "next/image";
+import { type Dispatch, type SetStateAction, useEffect, useState } from "react";
+import { teacherSchema, type TeacherSchema } from "@/lib/formValidationSchemas";
+import { useFormState } from "react-dom";
+import { createTeacher, updateTeacher } from "@/lib/actions";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { CldUploadWidget } from "next-cloudinary";
 
 const TeacherForm = ({
   type,
@@ -11,79 +20,84 @@ const TeacherForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: (open: boolean) => void;
+  setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
-  const [formData, setFormData] = useState({
-    username: data?.username || "",
-    email: data?.email || "",
-    password: "",
-    name: data?.name || "",
-    surname: data?.surname || "",
-    phone: data?.phone || "",
-    address: data?.address || "",
-    bloodType: data?.bloodType || "",
-    sex: data?.sex || "",
-    birthday: data?.birthday ? new Date(data.birthday).toISOString().split("T")[0] : "",
-    id: data?.id || "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<TeacherSchema>({
+    resolver: zodResolver(teacherSchema),
   });
 
+  const [img, setImg] = useState<any>();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
     data?.subjects?.map((subject: any) => subject.id.toString()) || []
   );
-  const [image, setImage] = useState(data?.img || "");
-  const [error, setError] = useState("");
+
+  const [state, formAction] = useFormState(
+    type === "create" ? createTeacher : updateTeacher,
+    {
+      success: false,
+      error: false,
+      errorMessage: "",
+    }
+  );
+
+  const onSubmit = handleSubmit((formData) => {
+    const submitData = {
+      ...formData,
+      img: img?.secure_url,
+      subjects: selectedSubjects,
+    };
+    formAction(submitData);
+  });
 
   const router = useRouter();
-  const { subjects = [] } = relatedData || {};
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubjectChange = (subjectId: string, checked: boolean) => {
-    setSelectedSubjects(prev =>
-      checked
-        ? [...prev, subjectId]
-        : prev.filter(id => id !== subjectId)
-    );
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (selectedSubjects.length === 0) {
-      setError("At least one subject is required");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        type === "create" ? "/api/teachers" : `/api/teachers/${data.id}`,
-        {
-          method: type === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...formData,
-            img: image,
-            subjects: selectedSubjects,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error(await response.text());
-
+  useEffect(() => {
+    if (state.success) {
+      toast(`Teacher has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
-      alert(`Teacher ${type === "create" ? "created" : "updated"} successfully!`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }, [state, router, type, setOpen]);
+
+  // Set default values for update
+  useEffect(() => {
+    if (type === "update" && data) {
+      setValue("username", data.username);
+      setValue("name", data.name);
+      setValue("surname", data.surname);
+      setValue("email", data.email);
+      setValue("phone", data.phone);
+      setValue("address", data.address);
+      setValue("bloodType", data.bloodType);
+      setValue("sex", data.sex);
+      if (data.birthday) {
+        setValue("birthday", new Date(data.birthday));
+      }
+      if (data.id) {
+        setValue("id", data.id);
+      }
+    }
+  }, [data, setValue, type]);
+
+  const { subjects } = relatedData || { subjects: [] };
+
+  const handleSubjectChange = (subjectId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSubjects([...selectedSubjects, subjectId]);
+    } else {
+      setSelectedSubjects(selectedSubjects.filter((id) => id !== subjectId));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6  h-[70vh] overflow-scroll scrollbar-hide">
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
       <h2 className="text-xl font-semibold">
         {type === "create" ? "Create Teacher" : "Update Teacher"}
       </h2>
@@ -94,35 +108,36 @@ const TeacherForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">Username</label>
             <input
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
+              {...register("username")}
+              defaultValue={data?.username}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.username && (
+              <p className="text-xs text-red-500 mt-1">{errors.username.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              {...register("email")}
+              defaultValue={data?.email}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.email && (
+              <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+            )}
           </div>
           {type === "create" && (
             <div>
               <label className="block text-sm font-medium mb-1">Password</label>
               <input
                 type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
+                {...register("password")}
                 className="w-full p-2 border rounded"
-                required={type === "create"}
               />
+              {errors.password && (
+                <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>
+              )}
             </div>
           )}
         </div>
@@ -134,75 +149,91 @@ const TeacherForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">First Name</label>
             <input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              {...register("name")}
+              defaultValue={data?.name}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.name && (
+              <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Last Name</label>
             <input
-              name="surname"
-              value={formData.surname}
-              onChange={handleChange}
+              {...register("surname")}
+              defaultValue={data?.surname}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.surname && (
+              <p className="text-xs text-red-500 mt-1">{errors.surname.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
             <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
+              {...register("phone")}
+              defaultValue={data?.phone}
               className="w-full p-2 border rounded"
             />
+            {errors.phone && (
+              <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Address</label>
             <input
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
+              {...register("address")}
+              defaultValue={data?.address}
               className="w-full p-2 border rounded"
             />
+            {errors.address && (
+              <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
             <input
-              name="bloodType"
-              value={formData.bloodType}
-              onChange={handleChange}
+              {...register("bloodType")}
+              defaultValue={data?.bloodType}
               className="w-full p-2 border rounded"
             />
+            {errors.bloodType && (
+              <p className="text-xs text-red-500 mt-1">{errors.bloodType.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Birthday</label>
             <input
               type="date"
-              name="birthday"
-              value={formData.birthday}
-              onChange={handleChange}
+              {...register("birthday")}
+              defaultValue={
+                data?.birthday
+                  ? new Date(data.birthday).toISOString().split("T")[0]
+                  : ""
+              }
               className="w-full p-2 border rounded"
             />
+            {errors.birthday && (
+              <p className="text-xs text-red-500 mt-1">{errors.birthday.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Sex</label>
             <select
-              name="sex"
-              value={formData.sex}
-              onChange={handleChange}
+              {...register("sex")}
+              defaultValue={data?.sex}
               className="w-full p-2 border rounded"
             >
               <option value="">Select</option>
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
             </select>
+            {errors.sex && (
+              <p className="text-xs text-red-500 mt-1">{errors.sex.message}</p>
+            )}
           </div>
           {data?.id && (
-            <input type="hidden" name="id" value={formData.id} />
+            <input type="hidden" {...register("id")} defaultValue={data?.id} />
           )}
         </div>
       </fieldset>
@@ -211,11 +242,14 @@ const TeacherForm = ({
         <legend className="text-sm font-medium text-gray-400">Subjects</legend>
         <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded">
           {subjects.map((subject: { id: number; name: string }) => (
-            <label key={subject.id} className="flex items-center gap-2">
+            <label key={subject.id} className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={selectedSubjects.includes(subject.id.toString())}
-                onChange={(e) => handleSubjectChange(subject.id.toString(), e.target.checked)}
+                onChange={(e) =>
+                  handleSubjectChange(subject.id.toString(), e.target.checked)
+                }
+                className="w-4 h-4"
               />
               {subject.name}
             </label>
@@ -227,45 +261,48 @@ const TeacherForm = ({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-500">Photo</legend>
+        <legend className="text-sm font-medium text-gray-400">Photo</legend>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-            {image ? (
-              <img src={image} alt="Teacher" className="w-full h-full object-cover" />
+            {img?.secure_url || data?.img ? (
+              <Image
+                src={img?.secure_url || data?.img}
+                alt="Teacher"
+                width={48}
+                height={48}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400 text-[8px]">
                 No photo
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              // Implement your image upload logic here
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  // In a real app, you would upload the file here
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setImage(event.target?.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              };
-              input.click();
+          <CldUploadWidget
+            uploadPreset="school"
+            onSuccess={(result, { widget }) => {
+              setImg(result.info);
+              widget.close();
             }}
-            className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
           >
-            Upload Photo
-          </button>
+            {({ open }) => {
+              return (
+                <button
+                  type="button"
+                  onClick={() => open()}
+                  className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+                >
+                  Upload Photo
+                </button>
+              );
+            }}
+          </CldUploadWidget>
         </div>
       </fieldset>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
 
       <div className="flex justify-end gap-4">
         <button
