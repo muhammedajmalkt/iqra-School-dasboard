@@ -11,25 +11,26 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
-      - /home/lenovo/envs/iqraschool.env # in ec2 /home/ubuntu/envs/iqraschool.env
+      - .env
 
   app:
     build:
       context: .
-      target: production 
-      args:
-        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      target: development
     container_name: nextjs_app
     ports:
       - "3000:3000"
     restart: always
     networks:
       - iqraschool
-    command: sh -c "npx prisma migrate deploy && npm start"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npx prisma migrate deploy && npm run dev"
     depends_on:
       - postgres
     env_file:
-      - /home/lenovo/envs/iqraschool.env # in ec2 /home/ubuntu/envs/iqraschool.env
+      - .env
 
 volumes:
   postgres_data:
