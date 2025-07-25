@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { toast } from "react-toastify";
+import { parentSchema, type ParentSchema } from "@/lib/formValidationSchemas";
+import { createParent, updateParent } from "@/lib/actions";
 
 const ParentForm = ({
   type,
@@ -11,58 +17,60 @@ const ParentForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: (open: boolean) => void;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
-  const [formData, setFormData] = useState({
-    username: data?.username || "",
-    email: data?.email || "",
-    password: "",
-    name: data?.name || "",
-    surname: data?.surname || "",
-    phone: data?.phone || "",
-    address: data?.address || "",
-    id: data?.id || "",
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<ParentSchema>({
+    resolver: zodResolver(parentSchema),
   });
 
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, formAction] = useActionState(
+    type === "create" ? createParent : updateParent,
+    {
+      success: false,
+      error: false,
+      errorMessage: "",
+    }
+  );
 
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const onSubmit = handleSubmit((formData) => {
+    startTransition(() => {
+      formAction(formData);
+    });
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(
-        type === "create" ? "/api/parents" : `/api/parents/${data.id}`,
-        {
-          method: type === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      if (!response.ok) throw new Error(await response.text());
-
+  useEffect(() => {
+    if (state.success) {
+      toast(`Parent has been ${type === "create" ? "created" : "updated"}!`);
       setOpen(false);
       router.refresh();
-      alert(`Parent ${type === "create" ? "created" : "updated"} successfully!`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [state, type, setOpen, router]);
+
+  useEffect(() => {
+    if (type === "update" && data) {
+      setValue("username", data.username);
+      setValue("name", data.name);
+      setValue("surname", data.surname);
+      setValue("email", data.email);
+      setValue("phone", data.phone);
+      setValue("address", data.address);
+      if (data.id) {
+        setValue("id", data.id);
+      }
+    }
+  }, [data, setValue, type]);
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
       <h2 className="text-xl font-semibold">
         {type === "create" ? "Create Parent" : "Update Parent"}
       </h2>
@@ -73,37 +81,31 @@ const ParentForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">Username</label>
             <input
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
+              {...register("username")}
+              defaultValue={data?.username}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              {...register("email")}
+              defaultValue={data?.email}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
           </div>
-          {type === "create" && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              {...register("password")}
+              className="w-full p-2 border rounded"
+            />
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+          </div>
         </div>
       </fieldset>
 
@@ -113,48 +115,48 @@ const ParentForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">First Name</label>
             <input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              {...register("name")}
+              defaultValue={data?.name}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Last Name</label>
             <input
-              name="surname"
-              value={formData.surname}
-              onChange={handleChange}
+              {...register("surname")}
+              defaultValue={data?.surname}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
             <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
+              {...register("phone")}
+              defaultValue={data?.phone}
               className="w-full p-2 border rounded"
             />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Address</label>
             <input
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
+              {...register("address")}
+              defaultValue={data?.address}
               className="w-full p-2 border rounded"
             />
+            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
           </div>
           {data?.id && (
-            <input type="hidden" name="id" value={formData.id} />
+            <input type="hidden" {...register("id")} defaultValue={data.id} />
           )}
         </div>
       </fieldset>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
 
       <div className="flex justify-end gap-4">
         <button
@@ -166,10 +168,10 @@ const ParentForm = ({
         </button>
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isPending}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {isLoading
+          {isPending
             ? type === "create" ? "Creating..." : "Updating..."
             : type === "create" ? "Create" : "Update"}
         </button>

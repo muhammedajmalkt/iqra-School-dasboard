@@ -1,7 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import Image from "next/image";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { studentSchema, StudentSchema } from "@/lib/formValidationSchemas";
+import { useActionState, useTransition } from "react";
+import { createStudent, updateStudent } from "@/lib/actions";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
+import { CldUploadWidget } from "next-cloudinary";
 
 const StudentForm = ({
   type,
@@ -11,69 +19,43 @@ const StudentForm = ({
 }: {
   type: "create" | "update";
   data?: any;
-  setOpen: (open: boolean) => void;
+  setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: any;
 }) => {
-  const [formData, setFormData] = useState({
-    username: data?.username || "",
-    email: data?.email || "",
-    password: "",
-    name: data?.name || "",
-    surname: data?.surname || "",
-    phone: data?.phone || "",
-    address: data?.address || "",
-    bloodType: data?.bloodType || "",
-    sex: data?.sex || "MALE",
-    birthday: data?.birthday ? new Date(data.birthday).toISOString().split("T")[0] : "",
-    parentId: data?.parentId || "",
-    gradeId: data?.gradeId || "",
-    classId: data?.classId || "",
-    id: data?.id || "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<StudentSchema>({
+    resolver: zodResolver(studentSchema),
   });
 
-  const [image, setImage] = useState(data?.img || "");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [img, setImg] = useState<any>();
+  const [state, formAction] = useActionState(
+    type === "create" ? createStudent : updateStudent,
+    { success: false, error: false }
+  );
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const { grades = [], classes = [], parents = [] } = relatedData || {};
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const onSubmit = handleSubmit((data) => {
+    startTransition(() => {
+      formAction({ ...data, img: img?.secure_url });
+    });
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(
-        type === "create" ? "/api/students" : `/api/students/${data.id}`,
-        {
-          method: type === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...formData,
-            img: image,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error(await response.text());
-
+  useEffect(() => {
+    if (state.success) {
+      toast(`Student ${type === "create" ? "created" : "updated"} successfully!`);
       setOpen(false);
       router.refresh();
-      alert(`Student ${type === "create" ? "created" : "updated"} successfully!`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [state, router, type, setOpen]);
+
+  const { grades, classes, parents } = relatedData;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
       <h2 className="text-xl font-semibold">
         {type === "create" ? "Create Student" : "Update Student"}
       </h2>
@@ -84,37 +66,32 @@ const StudentForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">Username</label>
             <input
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
+              {...register("username")}
+              defaultValue={data?.username}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              {...register("email")}
+              defaultValue={data?.email}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
           </div>
-          {type === "create" && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full p-2 border rounded"
-                required={type === "create"}
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              {...register("password")}
+              defaultValue={data?.password}
+              className="w-full p-2 border rounded"
+            />
+            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+          </div>
         </div>
       </fieldset>
 
@@ -124,87 +101,81 @@ const StudentForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">First Name</label>
             <input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              {...register("name")}
+              defaultValue={data?.name}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Last Name</label>
             <input
-              name="surname"
-              value={formData.surname}
-              onChange={handleChange}
+              {...register("surname")}
+              defaultValue={data?.surname}
               className="w-full p-2 border rounded"
-              required
             />
+            {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
             <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
+              {...register("phone")}
+              defaultValue={data?.phone}
               className="w-full p-2 border rounded"
             />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Address</label>
             <input
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
+              {...register("address")}
+              defaultValue={data?.address}
               className="w-full p-2 border rounded"
             />
+            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
             <input
-              name="bloodType"
-              value={formData.bloodType}
-              onChange={handleChange}
+              {...register("bloodType")}
+              defaultValue={data?.bloodType}
               className="w-full p-2 border rounded"
             />
+            {errors.bloodType && <p className="text-red-500 text-xs mt-1">{errors.bloodType.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Birthday</label>
             <input
               type="date"
-              name="birthday"
-              value={formData.birthday}
-              onChange={handleChange}
+              {...register("birthday")}
+              defaultValue={data?.birthday?.toISOString().split("T")[0]}
               className="w-full p-2 border rounded"
             />
+            {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Sex</label>
             <select
-              name="sex"
-              value={formData.sex}
-              onChange={handleChange}
+              {...register("sex")}
+              defaultValue={data?.sex}
               className="w-full p-2 border rounded"
             >
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
             </select>
+            {errors.sex && <p className="text-red-500 text-xs mt-1">{errors.sex.message}</p>}
           </div>
-          {data?.id && (
-            <input type="hidden" name="id" value={formData.id} />
-          )}
         </div>
       </fieldset>
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">School Information</legend>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Parent</label>
             <select
-              name="parentId"
-              value={formData.parentId}
-              onChange={handleChange}
+              {...register("parentId")}
+              defaultValue={data?.parentId}
               className="w-full p-2 border rounded"
             >
               <option value="">Select Parent</option>
@@ -214,40 +185,37 @@ const StudentForm = ({
                 </option>
               ))}
             </select>
+            {errors.parentId && <p className="text-red-500 text-xs mt-1">{errors.parentId.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Grade</label>
             <select
-              name="gradeId"
-              value={formData.gradeId}
-              onChange={handleChange}
+              {...register("gradeId")}
+              defaultValue={data?.gradeId}
               className="w-full p-2 border rounded"
-              required
             >
-              <option value="">Select Grade</option>
               {grades.map((grade: { id: number; level: number }) => (
                 <option key={grade.id} value={grade.id}>
                   {grade.level}
                 </option>
               ))}
             </select>
+            {errors.gradeId && <p className="text-red-500 text-xs mt-1">{errors.gradeId.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Class</label>
             <select
-              name="classId"
-              value={formData.classId}
-              onChange={handleChange}
+              {...register("classId")}
+              defaultValue={data?.classId}
               className="w-full p-2 border rounded"
-              required
             >
-              <option value="">Select Class</option>
               {classes.map((classItem: any) => (
                 <option key={classItem.id} value={classItem.id}>
                   {classItem.name} ({classItem._count?.students || 0}/{classItem.capacity})
                 </option>
               ))}
             </select>
+            {errors.classId && <p className="text-red-500 text-xs mt-1">{errors.classId.message}</p>}
           </div>
         </div>
       </fieldset>
@@ -255,43 +223,44 @@ const StudentForm = ({
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">Photo</legend>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-            {image ? (
-              <img src={image} alt="Student" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-[8px]">
-                No photo
-              </div>
-            )}
+          <div className="w-12 h-12 rounded-full overflow-hidden">
+            <Image
+              src={img?.secure_url || data?.img || "/noAvatar.png"}
+              alt=""
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+            />
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setImage(event.target?.result as string);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              };
-              input.click();
+          <CldUploadWidget
+            uploadPreset="school"
+            onSuccess={(result, { widget }) => {
+              setImg(result.info);
+              widget.close();
             }}
-            className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
           >
-            Upload Photo
-          </button>
+            {({ open }) => (
+              <button
+                type="button"
+                onClick={() => open()}
+                className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+              >
+                Upload Photo
+              </button>
+            )}
+          </CldUploadWidget>
         </div>
       </fieldset>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {data && (
+        <input type="hidden" {...register("id")} defaultValue={data?.id} />
+      )}
 
-      <div className="flex justify-end gap-4">
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+
+      <div className="flex justify-end gap-4 pt-4">
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -301,10 +270,10 @@ const StudentForm = ({
         </button>
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isPending}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {isLoading
+          {isPending
             ? type === "create" ? "Creating..." : "Updating..."
             : type === "create" ? "Create" : "Update"}
         </button>
