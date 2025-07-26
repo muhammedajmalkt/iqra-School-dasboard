@@ -39,10 +39,10 @@ const EventForm = ({
       startTime: formatDateTimeLocal(data?.startTime),
       endTime: formatDateTimeLocal(data?.endTime),
       classId: data?.classId?.toString() || "",
-      id: data?.id || "",
+      id: data?.id || undefined,
     },
   });
-
+  console.log("erros", errors);
   const [state, formAction] = useActionState(
     type === "create" ? createEvent : updateEvent,
     { success: false, error: false, errorMessage: "" }
@@ -53,6 +53,7 @@ const EventForm = ({
   const { classes = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
+    console.log("clicked");
     startTransition(() => {
       formAction(formData);
     });
@@ -60,7 +61,9 @@ const EventForm = ({
 
   useEffect(() => {
     if (state.success) {
-      toast.success(`Event ${type === "create" ? "created" : "updated"} successfully!`);
+      toast.success(
+        `Event ${type === "create" ? "created" : "updated"} successfully!`
+      );
       setOpen(false);
       router.refresh();
     }
@@ -73,7 +76,9 @@ const EventForm = ({
       </h2>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Event Details</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Event Details
+        </legend>
         <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Title</label>
@@ -83,18 +88,24 @@ const EventForm = ({
               required
             />
             {errors.title && (
-              <p className="text-xs text-red-500 mt-1">{errors.title.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.title.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label className="block text-sm font-medium mb-1">
+              Description
+            </label>
             <textarea
               {...register("description")}
               className="w-full p-2 border rounded min-h-[100px]"
             />
             {errors.description && (
-              <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.description.message}
+              </p>
             )}
           </div>
         </div>
@@ -112,7 +123,9 @@ const EventForm = ({
               required
             />
             {errors.startTime && (
-              <p className="text-xs text-red-500 mt-1">{errors.startTime.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.startTime.message}
+              </p>
             )}
           </div>
 
@@ -125,14 +138,18 @@ const EventForm = ({
               required
             />
             {errors.endTime && (
-              <p className="text-xs text-red-500 mt-1">{errors.endTime.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.endTime.message}
+              </p>
             )}
           </div>
         </div>
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Class Information</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Class Information
+        </legend>
         <div>
           <label className="block text-sm font-medium mb-1">Class</label>
           <select
@@ -142,19 +159,19 @@ const EventForm = ({
             <option value="">Select Class</option>
             {classes?.map((cls: any) => (
               <option key={cls.id} value={cls.id.toString()}>
-                {cls.name} - {cls.grade} {cls.section ? `(${cls.section})` : ''}
+                {cls.name} - {cls.grade} {cls.section ? `(${cls.section})` : ""}
               </option>
             ))}
           </select>
           {errors.classId && (
-            <p className="text-xs text-red-500 mt-1">{errors.classId.message}</p>
+            <p className="text-xs text-red-500 mt-1">
+              {errors.classId.message}
+            </p>
           )}
         </div>
       </fieldset>
 
-      {data?.id && (
-        <input type="hidden" {...register("id")} />
-      )}
+      {data?.id && <input type="hidden" {...register("id")} />}
 
       {state.error && state.errorMessage && (
         <p className="text-red-500 text-sm">{state.errorMessage}</p>
@@ -174,8 +191,12 @@ const EventForm = ({
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
           {isPending
-            ? type === "create" ? "Creating..." : "Updating..."
-            : type === "create" ? "Create" : "Update"}
+            ? type === "create"
+              ? "Creating..."
+              : "Updating..."
+            : type === "create"
+            ? "Create"
+            : "Update"}
         </button>
       </div>
     </form>
