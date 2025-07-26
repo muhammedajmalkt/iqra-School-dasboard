@@ -1,33 +1,37 @@
-"use client"
+"use client";
 
-import * as Clerk from "@clerk/elements/common"
-import * as SignIn from "@clerk/elements/sign-in"
-import { useUser } from "@clerk/nextjs"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import * as Clerk from "@clerk/elements/common";
+import * as SignIn from "@clerk/elements/sign-in";
+import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
-  const { isLoaded, isSignedIn, user } = useUser()
-  const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
+  const { isLoaded, user } = useUser();
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
-    const role = user?.publicMetadata.role
-    if (role) {
-      router.push(`/${role}`)
+    const role = user?.publicMetadata.role;
+    if (role && !isNavigating) {
+      setIsNavigating(true);
+      router.push(`/${role}`);
     }
-  }, [user, router])
+  }, [user, router, isNavigating]);
 
-  if (!isLoaded) {
+  // Show loading spinner during navigation
+  if (isNavigating) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-white">
-        <div className="relative z-20 flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <div className="relative z-20 flex flex-col items-center justify-center">
+          <div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-600">Redirecting to your dashboard...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -46,10 +50,12 @@ const LoginPage = () => {
         {/* Overlay Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 text-white">
           <div className="max-w-xl">
-            <h1 className="text-3xl font-bold mb-6">Welcome to YES PA Inamdar School</h1>
+            <h1 className="text-3xl font-bold mb-6">
+              Welcome to YES PA Inamdar School
+            </h1>
             <p className="text-lg text-blue-100 leading-relaxed">
-              Access your personalized dashboard to manage your academic journey and stay connected with your school
-              community.
+              Access your personalized dashboard to manage your academic journey
+              and stay connected with your school community.
             </p>
           </div>
         </div>
@@ -62,15 +68,27 @@ const LoginPage = () => {
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-                <Image src="/yeslogo.png" alt="YES Logo" width={32} height={32} className="" />
+                <Image
+                  src="/yeslogo.png"
+                  alt="YES Logo"
+                  width={32}
+                  height={32}
+                  className=""
+                />
               </div>
               <div className="text-left">
-                <h1 className="text-xl font-bold text-slate-900">YES PA Inamdar</h1>
+                <h1 className="text-xl font-bold text-slate-900">
+                  YES PA Inamdar
+                </h1>
                 <p className="text-sm text-slate-500">School Dashboard</p>
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Sign in to your account</h2>
-            <p className="text-slate-600">Enter your credentials to access your dashboard</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              Sign in to your account
+            </h2>
+            <p className="text-slate-600">
+              Enter your credentials to access your dashboard
+            </p>
           </div>
 
           {/* Login Form */}
@@ -80,7 +98,9 @@ const LoginPage = () => {
 
               <div className="space-y-4">
                 <Clerk.Field name="identifier" className="space-y-2">
-                  <Clerk.Label className="block text-sm font-semibold text-slate-700">Username</Clerk.Label>
+                  <Clerk.Label className="block text-sm font-semibold text-slate-700">
+                    Username
+                  </Clerk.Label>
                   <Clerk.Input
                     type="text"
                     required
@@ -91,7 +111,9 @@ const LoginPage = () => {
                 </Clerk.Field>
 
                 <Clerk.Field name="password" className="space-y-2">
-                  <Clerk.Label className="block text-sm font-semibold text-slate-700">Password</Clerk.Label>
+                  <Clerk.Label className="block text-sm font-semibold text-slate-700">
+                    Password
+                  </Clerk.Label>
                   <div className="relative">
                     <Clerk.Input
                       type={showPassword ? "text" : "password"}
@@ -103,9 +125,15 @@ const LoginPage = () => {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus:text-slate-600"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
                     </button>
                   </div>
                   <Clerk.FieldError className="text-sm text-red-600" />
@@ -114,9 +142,10 @@ const LoginPage = () => {
 
               <SignIn.Action
                 submit
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 outline-none"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isLoaded || isNavigating}
               >
-                Sign In
+                {!isLoaded || isNavigating ? "Loading..." : "Sign In"}
               </SignIn.Action>
             </SignIn.Step>
           </SignIn.Root>
@@ -126,8 +155,15 @@ const LoginPage = () => {
             <div className="flex items-center justify-center gap-2 text-slate-500 text-sm">
               <span>Powered by</span>
               <div className="flex items-center gap-1">
-                <Image src="/svg.png" alt="Cyberduce Logo" width={16} height={16} />
-                <span className="font-medium text-slate-700">Cyberduce Technologies</span>
+                <Image
+                  src="/svg.png"
+                  alt="Cyberduce Logo"
+                  width={16}
+                  height={16}
+                />
+                <span className="font-medium text-slate-700">
+                  Cyberduce Technologies
+                </span>
               </div>
             </div>
           </div>
@@ -145,7 +181,7 @@ const LoginPage = () => {
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;
