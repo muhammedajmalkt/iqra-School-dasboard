@@ -27,38 +27,30 @@ const Navbar = async () => {
       case "admin":
         // Admin can see all announcements - no additional filtering needed
         break;
-      
+
       case "teacher":
-        // Teachers see:
-        // 1. General announcements (classId is null)
-        // 2. Classes they supervise (supervisorId)
-        // 3. Classes where they teach lessons
         query.OR = [
           { classId: null }, // General announcements for all classes
-          { 
-            class: { 
-              supervisorId: userId 
-            } 
+          {
+            class: {
+              supervisorId: userId,
+            },
           }, // Classes they supervise
           {
             class: {
-              lessons: { 
-                some: { teacherId: userId } 
+              lessons: {
+                some: { teacherId: userId },
               },
             },
           }, // Classes where they teach lessons
         ];
         break;
-      
+
       case "student":
-        // Students see:
-        // 1. General announcements (classId is null) 
-        // 2. Announcements for their specific class (direct classId relationship)
-        
         // Get the student's classId
         const student = await prisma.student.findUnique({
           where: { id: userId },
-          select: { classId: true }
+          select: { classId: true },
         });
 
         if (student) {
@@ -71,19 +63,17 @@ const Navbar = async () => {
           query.classId = null;
         }
         break;
-      
+
       case "parent":
-        // Parents see:
-        // 1. General announcements (classId is null)
-        // 2. Announcements for their children's classes
-        
         // Get all classIds of the parent's children
         const parentStudents = await prisma.student.findMany({
           where: { parentId: userId },
-          select: { classId: true }
+          select: { classId: true },
         });
 
-        const childrenClassIds = parentStudents.map(student => student.classId);
+        const childrenClassIds = parentStudents.map(
+          (student) => student.classId
+        );
 
         if (childrenClassIds.length > 0) {
           query.OR = [
@@ -95,7 +85,7 @@ const Navbar = async () => {
           query.classId = null;
         }
         break;
-      
+
       default:
         // If no role or unknown role, only show general announcements
         query.classId = null;

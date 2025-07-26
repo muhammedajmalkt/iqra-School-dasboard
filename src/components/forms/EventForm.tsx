@@ -53,7 +53,6 @@ const EventForm = ({
   const { classes = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
-    console.log("clicked");
     startTransition(() => {
       formAction(formData);
     });
