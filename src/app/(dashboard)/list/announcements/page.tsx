@@ -42,11 +42,7 @@ const AnnouncementListPage = async ({
       accessor: "date",
       className: "hidden md:table-cell",
     },
-    {
-      header: "Status",
-      accessor: "status",
-      className: "hidden lg:table-cell",
-    },
+
     ...(role === "admin"
       ? [
           {
@@ -76,28 +72,20 @@ const AnnouncementListPage = async ({
           </div>
         </td>
         <td>
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            item.class 
-              ? "bg-blue-100 text-blue-700" 
-              : "bg-green-100 text-green-700"
-          }`}>
+          <span
+            className={`px-2 py-1 text-xs rounded-full ${
+              item.class
+                ? "bg-blue-100 text-blue-700"
+                : "bg-green-100 text-green-700"
+            }`}
+          >
             {item.class?.name || "All Classes"}
           </span>
         </td>
         <td className="hidden md:table-cell">
           {new Intl.DateTimeFormat("en-US").format(item.date)}
         </td>
-        <td className="hidden lg:table-cell">
-          <span
-            className={`px-2 py-1 text-xs rounded-full ${
-              isViewed
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
-          >
-            {isViewed ? "Read" : "Unread"}
-          </span>
-        </td>
+
         <td>
           <div className="flex items-center gap-2">
             {role === "admin" && (
@@ -116,7 +104,8 @@ const AnnouncementListPage = async ({
     );
   };
 
-  const { page, markViewed, classFilter, ...queryParams } = resolvedSearchParams;
+  const { page, markViewed, classFilter, ...queryParams } =
+    resolvedSearchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
@@ -131,9 +120,9 @@ const AnnouncementListPage = async ({
   }
 
   // Class filter condition (for admin/teacher filtering)
-  if (classFilter === 'general') {
+  if (classFilter === "general") {
     query.classId = null;
-  } else if (classFilter === 'specific') {
+  } else if (classFilter === "specific") {
     query.classId = { not: null };
   }
 
@@ -142,7 +131,7 @@ const AnnouncementListPage = async ({
     case "admin":
       // Admin can see all announcements - no additional filtering needed
       break;
-    
+
     case "teacher":
       // Teachers see:
       // 1. General announcements (classId is null)
@@ -150,30 +139,30 @@ const AnnouncementListPage = async ({
       // 3. Classes where they teach lessons
       query.OR = [
         { classId: null }, // General announcements for all classes
-        { 
-          class: { 
-            supervisorId: currentUserId! 
-          } 
+        {
+          class: {
+            supervisorId: currentUserId!,
+          },
         }, // Classes they supervise
         {
           class: {
-            lessons: { 
-              some: { teacherId: currentUserId! } 
+            lessons: {
+              some: { teacherId: currentUserId! },
             },
           },
         }, // Classes where they teach lessons
       ];
       break;
-    
+
     case "student":
       // Students see:
-      // 1. General announcements (classId is null) 
+      // 1. General announcements (classId is null)
       // 2. Announcements for their specific class (direct classId relationship)
-      
+
       // First, get the student's classId
       const student = await prisma.student.findUnique({
         where: { id: currentUserId! },
-        select: { classId: true }
+        select: { classId: true },
       });
 
       if (student) {
@@ -186,19 +175,19 @@ const AnnouncementListPage = async ({
         query.classId = null;
       }
       break;
-    
+
     case "parent":
       // Parents see:
       // 1. General announcements (classId is null)
       // 2. Announcements for their children's classes
-      
+
       // Get all classIds of the parent's children
       const parentStudents = await prisma.student.findMany({
         where: { parentId: currentUserId! },
-        select: { classId: true }
+        select: { classId: true },
       });
 
-      const childrenClassIds = parentStudents.map(student => student.classId);
+      const childrenClassIds = parentStudents.map((student) => student.classId);
 
       if (childrenClassIds.length > 0) {
         query.OR = [
@@ -210,7 +199,7 @@ const AnnouncementListPage = async ({
         query.classId = null;
       }
       break;
-    
+
     default:
       // If no role or unknown role, only show general announcements
       query.classId = null;
@@ -257,12 +246,16 @@ const AnnouncementListPage = async ({
     });
 
     if (unviewedAnnouncements.length > 0) {
-      const announcementIds = unviewedAnnouncements.map((announcement) => announcement.id);
+      const announcementIds = unviewedAnnouncements.map(
+        (announcement) => announcement.id
+      );
       await markMultipleAnnouncementsAsViewed(currentUserId, announcementIds);
-      
+
       // Redirect to mark as viewed to prevent the stale state
-      const params = new URLSearchParams(resolvedSearchParams as Record<string, string>);
-      params.set('markViewed', 'true');
+      const params = new URLSearchParams(
+        resolvedSearchParams as Record<string, string>
+      );
+      params.set("markViewed", "true");
       redirect(`/list/announcements?${params.toString()}`);
     }
   }
@@ -296,7 +289,7 @@ const AnnouncementListPage = async ({
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
-      if (value && key !== 'markViewed') query.set(key, value);
+      if (value && key !== "markViewed") query.set(key, value);
     }
     return query.toString();
   };
@@ -351,7 +344,12 @@ const AnnouncementListPage = async ({
             {(role === "admin" || role === "teacher") && (
               <div className="relative group">
                 <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
-                  <Image src="/filter.png" alt="Filter" width={14} height={14} />
+                  <Image
+                    src="/filter.png"
+                    alt="Filter"
+                    width={14}
+                    height={14}
+                  />
                 </button>
                 <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-[150px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="py-1">
@@ -369,10 +367,12 @@ const AnnouncementListPage = async ({
                     <Link
                       href={`/list/announcements?${getQueryString({
                         ...queryParams,
-                        classFilter: 'general',
+                        classFilter: "general",
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        classFilter === 'general' ? "bg-blue-50 text-blue-600" : ""
+                        classFilter === "general"
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       General Only
@@ -380,10 +380,12 @@ const AnnouncementListPage = async ({
                     <Link
                       href={`/list/announcements?${getQueryString({
                         ...queryParams,
-                        classFilter: 'specific',
+                        classFilter: "specific",
                       })}`}
                       className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        classFilter === 'specific' ? "bg-blue-50 text-blue-600" : ""
+                        classFilter === "specific"
+                          ? "bg-blue-50 text-blue-600"
+                          : ""
                       }`}
                     >
                       Class-Specific Only
