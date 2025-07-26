@@ -2,11 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { type Dispatch, type SetStateAction } from "react";
+import { type Dispatch, type SetStateAction, useEffect } from "react";
 import {
   announcementSchema,
   type AnnouncementSchema,
 } from "@/lib/formValidationSchemas";
+import { useActionState, useTransition } from "react";
+import { createAnnouncement, updateAnnouncement } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
@@ -36,31 +38,28 @@ const AnnouncementForm = ({
     },
   });
 
+  const [state, formAction] = useActionState(
+    type === "create" ? createAnnouncement : updateAnnouncement,
+    { success: false, error: false }
+  );
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const { classes = [] } = relatedData || {};
 
-  const onSubmit = handleSubmit(async (formData) => {
-    try {
-      const response = await fetch(
-        type === "create" ? "/api/announcements" : `/api/announcements/${data.id}`,
-        {
-          method: type === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
-      );
+  const onSubmit = handleSubmit((data) => {
+    startTransition(() => {
+      formAction(data);
+    });
+  });
 
-      if (!response.ok) throw new Error(await response.text());
-
+  useEffect(() => {
+    if (state.success) {
+      toast.success(`Announcement ${type === "create" ? "created" : "updated"} successfully!`);
       setOpen(false);
       router.refresh();
-      toast.success(
-        `Announcement ${type === "create" ? "created" : "updated"} successfully!`
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
     }
-  });
+  }, [state, router, type, setOpen]);
+
+  const { classes = [] } = relatedData || {};
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
@@ -76,7 +75,6 @@ const AnnouncementForm = ({
             <input
               {...register("title")}
               className="w-full p-2 border rounded"
-              required
             />
             {errors.title?.message && (
               <p className="text-xs text-red-500 mt-1">{errors.title.message.toString()}</p>
@@ -89,7 +87,6 @@ const AnnouncementForm = ({
               type="datetime-local"
               {...register("date")}
               className="w-full p-2 border rounded"
-              required
             />
             {errors.date?.message && (
               <p className="text-xs text-red-500 mt-1">{errors.date.message.toString()}</p>
@@ -101,7 +98,6 @@ const AnnouncementForm = ({
             <textarea
               {...register("description")}
               className="w-full p-2 border rounded min-h-32"
-              required
             />
             {errors.description?.message && (
               <p className="text-xs text-red-500 mt-1">{errors.description.message.toString()}</p>
@@ -132,6 +128,10 @@ const AnnouncementForm = ({
         </div>
       </fieldset>
 
+      {state.error && state.errorMessage && (
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
+      )}
+
       <div className="flex justify-end gap-4">
         <button
           type="button"
@@ -142,9 +142,12 @@ const AnnouncementForm = ({
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={isPending}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {type === "create" ? "Create" : "Update"}
+          {isPending
+            ? type === "create" ? "Creating..." : "Updating..."
+            : type === "create" ? "Create" : "Update"}
         </button>
       </div>
     </form>
