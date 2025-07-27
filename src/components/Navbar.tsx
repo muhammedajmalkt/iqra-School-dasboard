@@ -3,6 +3,7 @@ import Image from "next/image";
 import AnnouncementBadge from "./forms/AnnouncementBadge";
 import prisma from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server";
+import { Prisma } from "@prisma/client";
 
 const Navbar = async () => {
   const user = await currentUser();
@@ -12,61 +13,88 @@ const Navbar = async () => {
   let unseenCount = 0;
 
   if (userId && role) {
-    const roleFilter: any[] = [];
-
-    if (role === "admin") {
-      // No filter needed, admin sees all
-    } else {
-      if (["teacher", "student", "parent"].includes(role)) {
-        roleFilter.push({ classId: null });
-
-        if (role === "teacher") {
-          roleFilter.push({
-            class: {
-              lessons: {
-                some: {
-                  teacherId: userId,
-                },
-              },
-            },
-          });
-        }
-
-        if (role === "student") {
-          roleFilter.push({
-            class: {
-              students: {
-                some: {
-                  id: userId,
-                },
-              },
-            },
-          });
-        }
-
-        if (role === "parent") {
-          roleFilter.push({
-            class: {
-              students: {
-                some: {
-                  parentId: userId,
-                },
-              },
-            },
-          });
-        }
-      }
-    }
-
-    unseenCount = await prisma.announcement.count({
-      where: {
-        ...(role !== "admin" ? { OR: roleFilter } : {}),
-        views: {
-          none: {
-            userId: userId,
-          },
+    // Build the same query structure as in AnnouncementListPage
+    const query: Prisma.AnnouncementWhereInput = {
+      views: {
+        none: {
+          userId: userId,
         },
       },
+    };
+
+    // Apply role-based filtering (same logic as AnnouncementListPage)
+    switch (role) {
+      case "admin":
+        // Admin can see all announcements - no additional filtering needed
+        break;
+
+      case "teacher":
+        query.OR = [
+          { classId: null }, // General announcements for all classes
+          {
+            class: {
+              supervisorId: userId,
+            },
+          }, // Classes they supervise
+          {
+            class: {
+              lessons: {
+                some: { teacherId: userId },
+              },
+            },
+          }, // Classes where they teach lessons
+        ];
+        break;
+
+      case "student":
+        // Get the student's classId
+        const student = await prisma.student.findUnique({
+          where: { id: userId },
+          select: { classId: true },
+        });
+
+        if (student) {
+          query.OR = [
+            { classId: null }, // General announcements for all classes
+            { classId: student.classId }, // Announcements for their specific class
+          ];
+        } else {
+          // If student not found, only show general announcements
+          query.classId = null;
+        }
+        break;
+
+      case "parent":
+        // Get all classIds of the parent's children
+        const parentStudents = await prisma.student.findMany({
+          where: { parentId: userId },
+          select: { classId: true },
+        });
+
+        const childrenClassIds = parentStudents.map(
+          (student) => student.classId
+        );
+
+        if (childrenClassIds.length > 0) {
+          query.OR = [
+            { classId: null }, // General announcements for all classes
+            { classId: { in: childrenClassIds } }, // Announcements for children's classes
+          ];
+        } else {
+          // If no children found, only show general announcements
+          query.classId = null;
+        }
+        break;
+
+      default:
+        // If no role or unknown role, only show general announcements
+        query.classId = null;
+        break;
+    }
+
+    // Count unseen announcements with the applied filters
+    unseenCount = await prisma.announcement.count({
+      where: query,
     });
   }
 
@@ -78,6 +106,7 @@ const Navbar = async () => {
           type="text"
           placeholder="Search..."
           className="w-[200px] p-2 bg-transparent outline-none"
+          readOnly
         />
       </div>
 

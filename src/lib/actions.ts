@@ -1384,6 +1384,7 @@ export const createEvent = async (
   data: EventSchema
 ): Promise<CurrentState> => {
   try {
+    console.log("event:",data)
     await prisma.event.create({
       data: {
         title: data.title,

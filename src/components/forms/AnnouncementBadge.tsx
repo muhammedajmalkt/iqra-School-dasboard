@@ -31,7 +31,7 @@ export default function AnnouncementBadge({
         height={20}
       />
       {unseenCount > 0 && (
-        <div className="absolute -top-3 -right-3 w-5 h-5 flex items-center justify-center bg-purple-500 text-white rounded-full text-xs">
+        <div className="absolute -top-3 -right-3 w-5 h-5 flex items-center justify-center bg-blue-800 text-white rounded-full text-xs">
           {unseenCount > 99 ? "99+" : unseenCount}
         </div>
       )}
