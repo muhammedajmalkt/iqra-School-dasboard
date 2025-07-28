@@ -2,9 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useActionState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { resultSchema, type ResultSchema } from "@/lib/formValidationSchemas";
 import { createResult, updateResult } from "@/lib/actions";
@@ -37,7 +36,7 @@ const ResultForm = ({
     },
   });
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createResult : updateResult,
     {
       success: false,

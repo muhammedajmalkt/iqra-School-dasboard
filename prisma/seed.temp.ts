@@ -98,11 +98,9 @@ async function main() {
         name: `Lesson${i}`,
         day: Day[
           Object.keys(Day)[
-            Math.floor(Math.random() * Object.keys(Day).length)
+          Math.floor(Math.random() * Object.keys(Day).length)
           ] as keyof typeof Day
         ],
-        startTime: new Date(new Date().setHours(new Date().getHours() + 1)),
-        endTime: new Date(new Date().setHours(new Date().getHours() + 3)),
         subjectId: (i % 10) + 1,
         classId: (i % 6) + 1,
         teacherId: `teacher${(i % 15) + 1}`,
@@ -190,7 +188,6 @@ async function main() {
         date: new Date(),
         present: true,
         studentId: `student${i}`,
-        lessonId: (i % 30) + 1,
       },
     });
   }
@@ -218,6 +215,59 @@ async function main() {
         classId: (i % 5) + 1,
       },
     });
+  }
+
+  // FEE TYPES
+  const feeTypes = [
+    {
+      name: "Tuition",
+      description: "Monthly tuition fee",
+      defaultAmount: 150.0,
+    },
+    {
+      name: "Lab Fee",
+      description: "Science lab maintenance fee",
+      defaultAmount: 50.0,
+    },
+    {
+      name: "Library Fee",
+      description: "Library membership and maintenance",
+      defaultAmount: 30.0,
+    },
+    {
+      name: "Transport",
+      description: "School bus fee",
+      defaultAmount: 75.0,
+    },
+  ];
+
+  for (const feeType of feeTypes) {
+    await prisma.feeType.create({ data: feeType });
+  }
+
+  // FEES
+  const semesters = ["Spring", "Fall"];
+  const academicYear = "2024-2025";
+
+  for (let i = 1; i <= 25; i++) {
+    for (let j = 1; j <= 2; j++) {
+      await prisma.fee.create({
+        data: {
+          studentId: `student${i}`,
+          feeTypeId: j,
+          amount: feeTypes[j - 1].defaultAmount || 0,
+          paidAmount: j % 2 === 0 ? feeTypes[j - 1].defaultAmount || 0 : 0,
+          dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+          paidDate: j % 2 === 0 ? new Date() : null,
+          academicYear,
+          semester: semesters[i % 2],
+          status: j % 2 === 0 ? "paid" : "pending",
+          paymentMethod: j % 2 === 0 ? "Credit Card" : null,
+          transactionId: j % 2 === 0 ? `TXN-${i}${j}` : null,
+          description: `Fee for ${feeTypes[j - 1].name} - ${semesters[i % 2]}`,
+        },
+      });
+    }
   }
 
 

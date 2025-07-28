@@ -2,9 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import InputField from "../InputField";
-import { type Dispatch, type SetStateAction, useEffect } from "react";
-import { useFormState } from "react-dom";
+import { type Dispatch, type SetStateAction, useActionState, useEffect } from "react";
 import { createAttendances } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -24,7 +22,6 @@ const TeacherAttendanceForm = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   relatedData?: {
     students: { id: string; name: string }[];
-    lessons: { id: number; title: string }[];
   };
 }) => {
   const {
@@ -36,7 +33,6 @@ const TeacherAttendanceForm = ({
     resolver: zodResolver(teacherAttendanceSchema),
     defaultValues: {
       date: new Date().toISOString().split("T")[0],
-      lessonId: undefined,
       attendances:
         relatedData?.students.map((student) => ({
           studentId: student.id,
@@ -44,13 +40,12 @@ const TeacherAttendanceForm = ({
         })) || [],
     },
   });
-
   const { fields } = useFieldArray({
     control,
     name: "attendances",
   });
 
-  const [state, formAction] = useFormState(createAttendances, {
+  const [state, formAction] = useActionState(createAttendances, {
     success: false,
     error: false,
     errorMessage: "",
@@ -66,61 +61,44 @@ const TeacherAttendanceForm = ({
     }
   }, [state, router, setOpen]);
 
-  const { students = [], lessons = [] } = relatedData || {};
+  const { students = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
     formAction(formData);
   });
 
   return (
-    <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">Record Attendance for Students</h1>
+    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
+      <h2 className="text-xl font-semibold">Record Attendance for Students</h2>
 
-      <span className="text-xs text-gray-400 font-medium">
-        Attendance Information
-      </span>
-
-      <div className="flex justify-between flex-wrap gap-4">
-        <InputField
-          label="Date"
-          name="date"
-          type="date"
-          defaultValue={new Date().toISOString().split("T")[0]}
-          register={register}
-          error={errors?.date}
-        />
-
-        <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Lesson</label>
-          <select
-            className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
-            {...register("lessonId")}
-          >
-            <option value="">Select Lesson</option>
-            {lessons.map((lesson: { id: number; title: string }) => (
-              <option key={lesson.id} value={lesson.id}>
-                {lesson.title}
-              </option>
-            ))}
-          </select>
-          {errors.lessonId?.message && (
-            <p className="text-xs text-red-400">
-              {errors.lessonId.message.toString()}
-            </p>
-          )}
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Attendance Information</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input
+              type="date"
+              {...register("date")}
+              className="w-full p-2 border rounded"
+              defaultValue={new Date().toISOString().split("T")[0]}
+            />
+            {errors.date?.message && (
+              <p className="text-red-500 text-xs mt-1">{errors.date.message.toString()}</p>
+            )}
+          </div>
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-4 max-h-72 overflow-y-scroll scrollbar-hide">
-        <span className="text-xs text-gray-400 font-medium">Students</span>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-gray-400">Students</legend>
+        <div className="overflow-x-auto max-h-[300px] overflow-y-auto scrollbar-hide">
+          <table className="min-w-full border border-gray-200">
+            <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
                   Student Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
                   Present
                 </th>
               </tr>
@@ -142,7 +120,7 @@ const TeacherAttendanceForm = ({
                             type="checkbox"
                             checked={field.value}
                             onChange={(e) => field.onChange(e.target.checked)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded"
                           />
                         )}
                       />
@@ -159,17 +137,29 @@ const TeacherAttendanceForm = ({
           </table>
         </div>
         {errors.attendances?.message && (
-          <p className="text-xs text-red-400">{errors.attendances.message}</p>
+          <p className="text-red-500 text-xs mt-1">{errors.attendances.message.toString()}</p>
         )}
-      </div>
+      </fieldset>
 
       {state.error && state.errorMessage && (
-        <span className="text-red-500">{state.errorMessage}</span>
+        <p className="text-red-500 text-sm">{state.errorMessage}</p>
       )}
 
-      <button className="bg-blue-400 text-white p-2 rounded-md" type="submit">
-        Record Attendances
-      </button>
+      <div className="flex justify-end gap-4">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Record Attendances
+        </button>
+      </div>
     </form>
   );
 };

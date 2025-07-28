@@ -130,8 +130,6 @@ export const lessonSchema = z.object({
   day: z.enum(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"], {
     required_error: "Day is required",
   }),
-  startTime: z.string().min(1, { message: "Start time is required" }),
-  endTime: z.string().min(1, { message: "End time is required" }),
   subjectId: z.coerce.number({ message: "Subject is required" }),
   classId: z.coerce.number({ message: "Class is required" }),
   teacherId: z.string().min(1, { message: "Teacher is required" }),
@@ -211,7 +209,7 @@ export const resultSchema = z
 export type ResultSchema = z.infer<typeof resultSchema>;
 
 export const attendanceSchema = z.object({
-  id: z.number().optional(),
+  id: z.coerce.number().optional(), // 👈 Automatically parses string to number
   date: z
     .string()
     .min(1, "Date is required")
@@ -222,7 +220,6 @@ export const attendanceSchema = z.object({
     message: "Present must be a valid boolean value",
   }),
   studentId: z.string().min(1, "Student is required"),
-  lessonId: z.coerce.number().min(1, "Lesson is required"),
 });
 
 export type AttendanceSchema = z.infer<typeof attendanceSchema>;

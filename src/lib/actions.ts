@@ -109,7 +109,6 @@ export const createFee = async (
       data: feeData,
     });
 
-    revalidatePath("/list/finance");
     return { success: true, error: false };
   } catch (err) {
     console.error("Error creating fee:", err);
@@ -975,8 +974,6 @@ export const createLesson = async (
       data: {
         name: data.name,
         day: data.day,
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
         subjectId: data.subjectId,
         classId: data.classId,
         teacherId: data.teacherId,
@@ -1009,8 +1006,6 @@ export const updateLesson = async (
       data: {
         name: data.name,
         day: data.day,
-        startTime: new Date(data.startTime),
-        endTime: new Date(data.endTime),
         subjectId: data.subjectId,
         classId: data.classId,
         teacherId: data.teacherId,
@@ -1283,10 +1278,8 @@ export const createAttendance = async (
         date: new Date(data.date),
         present: data.present,
         studentId: data.studentId,
-        lessonId: data.lessonId,
       },
     });
-
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Create attendance error:", err);
@@ -1315,7 +1308,6 @@ export const updateAttendance = async (
         date: new Date(data.date),
         present: data.present,
         studentId: data.studentId,
-        lessonId: data.lessonId,
       },
     });
 
