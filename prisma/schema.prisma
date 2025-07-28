@@ -136,13 +136,10 @@ model Lesson {
   id          Int          @id @default(autoincrement())
   name        String
   day         Day
-  startTime   DateTime
-  endTime     DateTime
   subjectId   Int
   classId     Int
   teacherId   String
   assignments Assignment[]
-  attendances Attendance[]
   exams       Exam[]
   class       Class        @relation(fields: [classId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
@@ -185,8 +182,6 @@ model Attendance {
   date      DateTime
   present   Boolean
   studentId String
-  lessonId  Int
-  lesson    Lesson   @relation(fields: [lessonId], references: [id])
   student   Student  @relation(fields: [studentId], references: [id])
 }
 

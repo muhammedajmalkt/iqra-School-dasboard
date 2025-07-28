@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -34,12 +35,6 @@ const LessonForm = ({
     defaultValues: {
       name: data?.name || "",
       day: data?.day || "",
-      startTime: data?.startTime
-        ? new Date(data.startTime).toISOString().slice(0, 16)
-        : "",
-      endTime: data?.endTime
-        ? new Date(data.endTime).toISOString().slice(0, 16)
-        : "",
       subjectId: data?.subjectId || undefined,
       classId: data?.classId || undefined,
       teacherId: data?.teacherId || "",
@@ -121,40 +116,6 @@ const LessonForm = ({
         </div>
       </fieldset>
 
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Time Schedule</legend>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Start Time</label>
-            <input
-              type="datetime-local"
-              {...register("startTime")}
-              className="w-full p-2 border rounded"
-              required
-            />
-            {errors.startTime?.message && (
-              <p className="text-xs text-red-400 mt-1">
-                {errors.startTime.message.toString()}
-              </p>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1">End Time</label>
-            <input
-              type="datetime-local"
-              {...register("endTime")}
-              className="w-full p-2 border rounded"
-              required
-            />
-            {errors.endTime?.message && (
-              <p className="text-xs text-red-400 mt-1">
-                {errors.endTime.message.toString()}
-              </p>
-            )}
-          </div>
-        </div>
-      </fieldset>
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">Assignments</legend>

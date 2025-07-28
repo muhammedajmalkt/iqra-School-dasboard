@@ -2,6 +2,7 @@ import Menu from "@/components/Menu";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export default async function DashboardLayout({
   children,
@@ -23,7 +24,13 @@ export default async function DashboardLayout({
       </div>
       {/* RIGHT */}
       <div className="w-[86%] md:w-[92%] lg:w-[84%] xl:w-[86%] bg-[#F7F8FA] overflow-scroll scrollbar-hide flex flex-col">
-        <Navbar />
+        <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center bg-white">
+          <div className="relative z-20 flex flex-col items-center justify-center">
+            <div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          </div>
+        </div>}>
+          <Navbar />
+        </Suspense>
         {children}
       </div>
     </div>
