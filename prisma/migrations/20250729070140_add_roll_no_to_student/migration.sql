@@ -1,3 +1,2 @@
 -- AlterTable
 ALTER TABLE "Student" ADD COLUMN     "rollNo" INTEGER NOT NULL DEFAULT 0;
-npx prisma studio
