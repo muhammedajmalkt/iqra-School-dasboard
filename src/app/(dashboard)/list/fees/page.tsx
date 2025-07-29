@@ -219,7 +219,7 @@ const FinanceListPage = async ({
   const columns = [
     { header: "Student", accessor: "student" },
     { header: "Fee Type", accessor: "feeType", className: "hidden md:table-cell" },
-    { header: "Amount", accessor: "amount", className: "hidden sm:table-cell" },
+    { header: "Amount", accessor: "amount", className: "hidden sm:table-cell text-center" },
     { header: "Due Date", accessor: "dueDate", className: "hidden lg:table-cell" },
     { header: "Status", accessor: "status" },
     ...(role === "admin" || role === "teacher"
@@ -252,7 +252,7 @@ const FinanceListPage = async ({
             )}
           </div>
         </td>
-        <td className="hidden sm:table-cell">
+        <td className="hidden sm:table-cell text-center">
           <div className="flex flex-col">
             <span className="font-semibold">₹{item.amount.toLocaleString()}</span>
             {item.paidAmount && item.paidAmount > 0 && (

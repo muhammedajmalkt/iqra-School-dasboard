@@ -9,7 +9,7 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { auth} from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 
 // TYPES
 type StudentList = Student & { class: Class };
@@ -25,13 +25,14 @@ const StudentListPage = async ({
 
   const columns = [
     { header: "Info", accessor: "info" },
+    { header: "Roll Number", accessor: "rollNo", className: "hidden lg:table-cell  text-center", },
     {
       header: "Student ID",
       accessor: "studentId",
       className: "hidden md:table-cell",
     },
-    { header: "Grade", accessor: "grade", className: "hidden md:table-cell" },
-    { header: "Phone", accessor: "phone", className: "hidden lg:table-cell" },
+    { header: "Grade", accessor: "grade", className: "hidden md:table-cell text-center" },
+    { header: "Phone", accessor: "phone", className: "hidden lg:table-cell text-center" },
     {
       header: "Address",
       accessor: "address",
@@ -58,9 +59,11 @@ const StudentListPage = async ({
           <p className="text-xs text-gray-500">{item.class.name}</p>
         </div>
       </td>
+            <td className="hidden md:table-cell   text-center">{item.rollNo}</td>
+
       <td className="hidden md:table-cell">{item.username}</td>
-      <td className="hidden md:table-cell">{item.class.name[0]}</td>
-      <td className="hidden md:table-cell">{item.phone}</td>
+      <td className="hidden md:table-cell text-center">{item.class.name[0]}</td>
+      <td className="hidden md:table-cell text-center">{item.phone}</td>
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
         <div className="flex items-center gap-2">
@@ -80,7 +83,7 @@ const StudentListPage = async ({
     </tr>
   );
 
-   const resolvedSearchParams = await searchParams;
+  const resolvedSearchParams = await searchParams;
 
   const { page, ...queryParams } = resolvedSearchParams;
   const p = page ? parseInt(page) : 1;
@@ -134,25 +137,37 @@ const StudentListPage = async ({
   }
 
   // SORT LOGIC
-  const currentSort = queryParams.sort || "created_desc";
-  const orderBy: Prisma.StudentOrderByWithRelationInput = (() => {
-    switch (currentSort) {
-      case "name_asc":
-        return { name: "asc" };
-      case "name_desc":
-        return { name: "desc" };
-      case "email_asc":
-        return { email: "asc" };
-      case "email_desc":
-        return { email: "desc" };
-      case "created_asc":
-        return { createdAt: "asc" };
-      case "created_desc":
-        return { createdAt: "desc" };
-      default:
-        return { name: "asc" };
-    }
-  })();
+  let currentSort=""
+  if(role === "admin"){
+   currentSort = queryParams.sort || "created_desc";
+  }else if(role === "teacher"){
+   currentSort = queryParams.sort || "roll_asc";
+
+  }
+
+const orderBy: Prisma.StudentOrderByWithRelationInput = (() => {
+  switch (currentSort) {
+    case "name_asc":
+      return { name: "asc" };
+    case "name_desc":
+      return { name: "desc" };
+    case "email_asc":
+      return { email: "asc" };
+    case "email_desc":
+      return { email: "desc" };
+    case "roll_asc":
+      return { rollNo: "asc" };
+    case "roll_desc":
+      return { rollNo: "desc" };
+    case "created_asc":
+      return { createdAt: "asc" };
+    case "created_desc":
+      return { createdAt: "desc" };
+    default:
+      return { name: "asc" };
+  }
+})();
+
 
   const [data, count] = await prisma.$transaction([
     prisma.student.findMany({
@@ -174,22 +189,23 @@ const StudentListPage = async ({
     }
     return query.toString();
   };
+const sortOptions = [
+  { value: "name_asc", label: "Name A-Z" },
+  { value: "name_desc", label: "Name Z-A" },
+  { value: "email_asc", label: "Email A-Z" },
+  { value: "email_desc", label: "Email Z-A" },
+  { value: "roll_asc", label: "Roll Number Asc" },
+  { value: "roll_desc", label: "Roll Number Desc" },
+  { value: "created_asc", label: "Oldest First" },
+  { value: "created_desc", label: "Newest First" },
+];
 
-  const sortOptions = [
-    { value: "name_asc", label: "Name A-Z" },
-    { value: "name_desc", label: "Name Z-A" },
-    { value: "email_asc", label: "Email A-Z" },
-    { value: "email_desc", label: "Email Z-A" },
-    { value: "created_asc", label: "Oldest First" },
-    { value: "created_desc", label: "Newest First" },
-  ];
-
-    
+  
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">
+                            <h1 className="hidden md:block text-lg font-semibold">
           {role === "teacher" ? "My Students" : "All Students"}
         </h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -266,7 +282,9 @@ const StudentListPage = async ({
             </div>
 
             {/* Add Button */}
-            {role === "admin" && <FormContainer table="student" type="create" />}
+            {(role === "admin" || role === "teacher") && (
+              <FormContainer table="student" type="create" />
+            )}
           </div>
         </div>
       </div>

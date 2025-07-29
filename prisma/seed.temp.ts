@@ -130,6 +130,7 @@ async function main() {
         id: `student${i}`,
         username: `student${i}`,
         name: `SName${i}`,
+        rollNo:i,
         surname: `SSurname ${i}`,
         email: `student${i}@example.com`,
         phone: `987-654-321${i}`,

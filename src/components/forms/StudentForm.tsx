@@ -53,6 +53,8 @@ const StudentForm = ({
   }, [state, router, type, setOpen]);
 
   const { grades, classes, parents } = relatedData;
+  
+console.log(state);
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
@@ -136,13 +138,24 @@ const StudentForm = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
-            <input
+            <select
               {...register("bloodType")}
               defaultValue={data?.bloodType}
               className="w-full p-2 border rounded"
-            />
+            >
+              <option value="">Select Blood Type</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
             {errors.bloodType && <p className="text-red-500 text-xs mt-1">{errors.bloodType.message}</p>}
           </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Birthday</label>
             <input
@@ -217,6 +230,20 @@ const StudentForm = ({
             </select>
             {errors.classId && <p className="text-red-500 text-xs mt-1">{errors.classId.message}</p>}
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Roll No</label>
+            <input
+              type="number"
+              min={1}
+              {...register("rollNo", { valueAsNumber: true })}
+              defaultValue={data?.rollNo}
+              className="w-full p-2 border rounded"
+            />
+            {errors.rollNo && (
+              <p className="text-red-500 text-xs mt-1">{errors.rollNo.message}</p>
+            )}
+          </div>
+
         </div>
       </fieldset>
 
