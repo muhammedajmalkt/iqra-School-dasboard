@@ -28,7 +28,7 @@ const LoginPage = () => {
       <div className="min-h-screen w-full flex items-center justify-center bg-white">
         <div className="relative z-20 flex flex-col items-center justify-center">
           <div className="w-8 h-8 border-4 border-t-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-          <p className="text-slate-600">Redirecting to your dashboard...</p>
+          {/* <p className="text-slate-600">Redirecting to your dashboard...</p> */}
         </div>
       </div>
     );

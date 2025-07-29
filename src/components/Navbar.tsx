@@ -6,7 +6,12 @@ import { currentUser } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
 
 const Navbar = async () => {
-  const user = await currentUser();
+  let user
+  try {
+     user = await currentUser();
+  } catch (error:any) {
+    console.log("err-----------:-",error.errors[0])
+  }
   const userId = user?.id;
   const role = (user?.publicMetadata?.role as string) || "";
 

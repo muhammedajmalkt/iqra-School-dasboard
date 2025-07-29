@@ -18,15 +18,28 @@ export type FormContainerProps = {
     | "event"
     | "announcement"
     | "fee"
+    | "incident"
+    | "behavior";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
 };
 
-const FormContainer = async ({ table, type, data, id  }: FormContainerProps) => {
+const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
   let relatedData = {};
 
-  const user = await currentUser();
+  let user;
+  try {
+    user = await currentUser();
+  } catch (error: any) {
+    console.log("err-----------:-", error.errors[0]);
+    // return (
+    //   <div>
+    //     <p>Unable to verify authentication. Please try again.</p>
+    //     <button onClick={() => window.location.reload()}>Retry</button>
+    //   </div>
+    // );
+  }
   const role = user?.publicMetadata.role as string;
   const currentUserId = user?.id;
 
@@ -362,6 +375,33 @@ const FormContainer = async ({ table, type, data, id  }: FormContainerProps) => 
           classes,
         };
         break;
+      }
+      case "incident": {
+        const [behaviors, students] = await prisma.$transaction([
+          prisma.behavior.findMany({
+            select: { id: true, title: true },
+            orderBy: { title: "asc" },
+          }),
+          prisma.student.findMany({
+            where:
+              role === "teacher"
+                ? {
+                    class: {
+                      lessons: {
+                        some: {
+                          teacherId: currentUserId!,
+                        },
+                      },
+                    },
+                  }
+                : {},
+            select: { id: true, name: true, surname: true },
+            orderBy: { name: "asc" },
+          }),
+        ]);
+
+        relatedData = { behaviors, students, currentUserId };
+         break;
       }
       case "fee": {
         const studentClasses = await prisma.student.findMany({

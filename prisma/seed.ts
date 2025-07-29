@@ -8,6 +8,15 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 async function createAdminUser() {
   try {
+    const existingUsers = await clerk.users.getUserList({
+      username: ["anfaskaloor"],
+    });
+
+    if (existingUsers.data.length > 0) {
+      await clerk.users.deleteUser(existingUsers.data[0].id);
+      console.log("Existing user deleted");
+    }
+
     const user = await clerk.users.createUser({
       username: "anfaskaloor",
       password: "SecureAdmin123!",
