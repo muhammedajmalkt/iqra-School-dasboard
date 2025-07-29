@@ -45,7 +45,6 @@
     "typescript": "^5.8.3"
   },
   "prisma": {
-    "seed:temp": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.temp.ts",
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   }
 }

@@ -259,59 +259,85 @@ export const eventSchema = z.object({
 export type EventSchema = z.infer<typeof eventSchema>;
 
 // Fee Schema
-export const feeSchema = z.object({
-  id: z.coerce.number().optional(),
-  studentId: z.string().min(1, { message: "Student is required!" }),
-  feeTypeId: z.coerce.number().min(1, { message: "Fee type is required!" }),
-  amount: z.coerce.number().min(0.01, { message: "Amount must be greater than 0!" }),
-  dueDate: z.string().min(1, { message: "Due date is required!" }),
-  academicYear: z.string().min(1, { message: "Academic year is required!" }),
-  semester: z.string().min(1, { message: "Semester is required!" }),
-  description: z.string().optional(),
-  status: z.enum(["pending", "paid", "partial", "cancelled"], {
-    message: "Please select a valid status!"
-  }),
-  paidAmount: z.coerce.number().min(0).optional(),
-  paidDate: z.string().optional(),
-  paymentMethod: z.string().optional(),
-  transactionId: z.string().optional(),
-}).refine((data) => {
-  // If status is paid, paidAmount, paidDate, and paymentMethod are required
-  if (data.status === "paid") {
-    return data.paidAmount && data.paidAmount > 0 && data.paidDate && data.paymentMethod;
-  }
-  return true;
-}, {
-  message: "Payment details are required when status is 'Paid'",
-  path: ["paidAmount"], // This will show the error on paidAmount field
-}).refine((data) => {
-  // If status is paid, paid amount should equal or be close to the total amount
-  if (data.status === "paid" && data.paidAmount) {
-    return data.paidAmount >= data.amount;
-  }
-  return true;
-}, {
-  message: "Paid amount cannot be less than total amount for fully paid fees",
-  path: ["paidAmount"],
-}).refine((data) => {
-  // If status is partial, paid amount should be less than total amount
-  if (data.status === "partial" && data.paidAmount) {
-    return data.paidAmount < data.amount && data.paidAmount > 0;
-  }
-  return true;
-}, {
-  message: "For partial payment, paid amount must be less than total amount and greater than 0",
-  path: ["paidAmount"],
-}).refine((data) => {
-  // If paidAmount is provided, it shouldn't exceed the total amount
-  if (data.paidAmount && data.paidAmount > 0) {
-    return data.paidAmount <= data.amount;
-  }
-  return true;
-}, {
-  message: "Paid amount cannot exceed the total amount",
-  path: ["paidAmount"],
-});
+export const feeSchema = z
+  .object({
+    id: z.coerce.number().optional(),
+    studentId: z.string().min(1, { message: "Student is required!" }),
+    feeTypeId: z.coerce.number().min(1, { message: "Fee type is required!" }),
+    amount: z.coerce
+      .number()
+      .min(0.01, { message: "Amount must be greater than 0!" }),
+    dueDate: z.string().min(1, { message: "Due date is required!" }),
+    academicYear: z.string().min(1, { message: "Academic year is required!" }),
+    semester: z.string().min(1, { message: "Semester is required!" }),
+    description: z.string().optional(),
+    status: z.enum(["pending", "paid", "partial", "cancelled"], {
+      message: "Please select a valid status!",
+    }),
+    paidAmount: z.coerce.number().min(0).optional(),
+    paidDate: z.string().optional(),
+    paymentMethod: z.string().optional(),
+    transactionId: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // If status is paid, paidAmount, paidDate, and paymentMethod are required
+      if (data.status === "paid") {
+        return (
+          data.paidAmount &&
+          data.paidAmount > 0 &&
+          data.paidDate &&
+          data.paymentMethod
+        );
+      }
+      return true;
+    },
+    {
+      message: "Payment details are required when status is 'Paid'",
+      path: ["paidAmount"], // This will show the error on paidAmount field
+    }
+  )
+  .refine(
+    (data) => {
+      // If status is paid, paid amount should equal or be close to the total amount
+      if (data.status === "paid" && data.paidAmount) {
+        return data.paidAmount >= data.amount;
+      }
+      return true;
+    },
+    {
+      message:
+        "Paid amount cannot be less than total amount for fully paid fees",
+      path: ["paidAmount"],
+    }
+  )
+  .refine(
+    (data) => {
+      // If status is partial, paid amount should be less than total amount
+      if (data.status === "partial" && data.paidAmount) {
+        return data.paidAmount < data.amount && data.paidAmount > 0;
+      }
+      return true;
+    },
+    {
+      message:
+        "For partial payment, paid amount must be less than total amount and greater than 0",
+      path: ["paidAmount"],
+    }
+  )
+  .refine(
+    (data) => {
+      // If paidAmount is provided, it shouldn't exceed the total amount
+      if (data.paidAmount && data.paidAmount > 0) {
+        return data.paidAmount <= data.amount;
+      }
+      return true;
+    },
+    {
+      message: "Paid amount cannot exceed the total amount",
+      path: ["paidAmount"],
+    }
+  );
 
 export type FeeSchema = z.infer<typeof feeSchema>;
 
@@ -320,8 +346,35 @@ export const feeTypeSchema = z.object({
   id: z.coerce.number().optional(),
   name: z.string().min(1, { message: "Fee type name is required!" }),
   description: z.string().optional(),
-  defaultAmount: z.coerce.number().min(0, { message: "Default amount must be 0 or greater!" }).optional(),
+  defaultAmount: z.coerce
+    .number()
+    .min(0, { message: "Default amount must be 0 or greater!" })
+    .optional(),
   isActive: z.boolean().default(true),
 });
 
 export type FeeTypeSchema = z.infer<typeof feeTypeSchema>;
+
+export const behaviorSchema = z.object({
+  id: z.coerce.number().optional(),
+  title: z.string().min(1, { message: "Title is required!" }),
+  description: z.string().min(1, { message: "Description is required!" }),
+  point: z.coerce
+    .number()
+    .nonnegative({message:"Number must be greater than or equal to 1"})
+    .min(1, { message: "Point is required!" }),
+  isNegative: z.boolean(),
+});
+
+export type BehaviorSchema = z.infer<typeof behaviorSchema>;
+
+export const incidentSchema = z.object({
+  id: z.coerce.number().optional(),
+  behaviorId: z.coerce.number().min(1, { message: "Behavior is required!" }),
+  studentId: z.string().min(1, { message: "Student is required!" }),
+  givenById: z.coerce.string().min(1, { message: "Given by is required!" }),
+  comment: z.string().min(1, { message: "Comment is required!" }),
+  date: z.coerce.date({ message: "Date is required!" }),
+});
+
+export type IncidentSchema = z.infer<typeof incidentSchema>;

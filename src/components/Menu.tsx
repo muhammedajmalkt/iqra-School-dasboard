@@ -66,6 +66,18 @@ const menuItems = [
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
+        icon: "/behavior.png",
+        label: "Behaviors",
+        href: "/list/behavior",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/incident.png",
+        label: "Incidents",
+        href: "/list/incident",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
         icon: "/attendance.png",
         label: "Attendance",
         href: "/list/attendance",
@@ -95,12 +107,9 @@ const menuItems = [
         href: "/list/messages",
         visible: ["admin", "teacher", "student", "parent"],
       },
-
     ],
   },
 ];
-
-
 
 const Menu = async () => {
   const { sessionClaims } = await auth();

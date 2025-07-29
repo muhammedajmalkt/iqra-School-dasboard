@@ -34,6 +34,7 @@ model Student {
   grade       Grade        @relation(fields: [gradeId], references: [id])
   parent      Parent       @relation(fields: [parentId], references: [id])
   fees        Fee[]
+  Incident    Incident[]
 }
 
 model Fee {
@@ -219,6 +220,33 @@ model AnnouncementView {
 
   @@unique([userId, announcementId])
   @@map("announcement_views")
+}
+
+model Behavior {
+  id          Int        @id @default(autoincrement())
+  title       String
+  point       Int
+  isNegative  Boolean
+  description String
+  Incident    Incident[]
+}
+
+model Incident {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  givenById  String
+  comment    String
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  behaviorId Int
+  behavior   Behavior @relation(fields: [behaviorId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum BehaviorType {
+  POSITIVE
+  NEGATIVE
 }
 
 enum UserSex {

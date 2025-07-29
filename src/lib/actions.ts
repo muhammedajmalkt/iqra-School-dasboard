@@ -3,9 +3,11 @@
 import prisma from "./prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import {
+  BehaviorSchema,
   EventSchema,
   feeSchema,
   FeeSchema,
+  IncidentSchema,
   teacherAttendanceSchema,
   type AnnouncementSchema,
   type AssignmentSchema,
@@ -47,7 +49,11 @@ export const createFee = async (
     });
 
     if (!student) {
-      return { success: false, error: true, errorMessage: "Student not found!" };
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Student not found!",
+      };
     }
 
     // Check if fee type exists
@@ -56,7 +62,11 @@ export const createFee = async (
     });
 
     if (!feeType) {
-      return { success: false, error: true, errorMessage: "Fee type not found!" };
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Fee type not found!",
+      };
     }
 
     // Check for duplicate fee (same student, fee type, academic year, semester)
@@ -70,10 +80,11 @@ export const createFee = async (
     });
 
     if (existingFee) {
-      return { 
-        success: false, 
-        error: true, 
-        errorMessage: "Fee already exists for this student, fee type, and academic period!" 
+      return {
+        success: false,
+        error: true,
+        errorMessage:
+          "Fee already exists for this student, fee type, and academic period!",
       };
     }
 
@@ -113,10 +124,11 @@ export const createFee = async (
     return { success: true, error: false };
   } catch (err) {
     console.error("Error creating fee:", err);
-    return { 
-      success: false, 
-      error: true, 
-      errorMessage: err instanceof Error ? err.message : "Something went wrong!" 
+    return {
+      success: false,
+      error: true,
+      errorMessage:
+        err instanceof Error ? err.message : "Something went wrong!",
     };
   }
 };
@@ -137,7 +149,11 @@ export const updateFee = async (
     const validatedData = feeSchema.parse(data);
 
     if (!validatedData.id) {
-      return { success: false, error: true, errorMessage: "Fee ID is required!" };
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Fee ID is required!",
+      };
     }
 
     // Check if fee exists
@@ -155,7 +171,11 @@ export const updateFee = async (
     });
 
     if (!student) {
-      return { success: false, error: true, errorMessage: "Student not found!" };
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Student not found!",
+      };
     }
 
     // Check if fee type exists
@@ -164,7 +184,11 @@ export const updateFee = async (
     });
 
     if (!feeType) {
-      return { success: false, error: true, errorMessage: "Fee type not found!" };
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Fee type not found!",
+      };
     }
 
     // Check for duplicate fee (only if changing key fields)
@@ -185,10 +209,11 @@ export const updateFee = async (
       });
 
       if (duplicateFee) {
-        return { 
-          success: false, 
-          error: true, 
-          errorMessage: "Another fee already exists for this student, fee type, and academic period!" 
+        return {
+          success: false,
+          error: true,
+          errorMessage:
+            "Another fee already exists for this student, fee type, and academic period!",
         };
       }
     }
@@ -236,10 +261,11 @@ export const updateFee = async (
     return { success: true, error: false };
   } catch (err) {
     console.error("Error updating fee:", err);
-    return { 
-      success: false, 
-      error: true, 
-      errorMessage: err instanceof Error ? err.message : "Something went wrong!" 
+    return {
+      success: false,
+      error: true,
+      errorMessage:
+        err instanceof Error ? err.message : "Something went wrong!",
     };
   }
 };
@@ -247,7 +273,7 @@ export const updateFee = async (
 export const deleteFee = async (
   currentState: { success: boolean; error: boolean },
   data: FormData
-) => {
+): Promise<CurrentState> => {
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
 
@@ -1384,7 +1410,7 @@ export const createEvent = async (
   data: EventSchema
 ): Promise<CurrentState> => {
   try {
-    console.log("event:",data)
+    console.log("event:", data);
     await prisma.event.create({
       data: {
         title: data.title,
@@ -1489,3 +1515,154 @@ export async function markMultipleAnnouncementsAsViewed(
     skipDuplicates: true,
   });
 }
+
+export const createBehavior = async (
+  currentState: CurrentState,
+  data: BehaviorSchema
+): Promise<CurrentState> => {
+  try {
+    const { description, point, isNegative, title } = data;
+    await prisma.behavior.create({
+      data: {
+        title,
+        description: description ?? "",
+        point,
+        isNegative,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create behavior error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const updateBehavior = async (
+  currentState: CurrentState,
+  data: BehaviorSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true, errorMessage: "Missing behavior ID" };
+  }
+  const { description, point, isNegative, title, id } = data;
+  try {
+    await prisma.behavior.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        point,
+        isNegative,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update behavior error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const deleteBehavior = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = Number(data.get("id"));
+  try {
+    await prisma.behavior.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const createIncident = async (
+  currentState: CurrentState,
+  data: IncidentSchema
+): Promise<CurrentState> => {
+  try {
+    const { behaviorId, studentId, givenById, comment, date } = data;
+
+    await prisma.incident.create({
+      data: {
+        behaviorId,
+        studentId,
+        givenById,
+        comment,
+        date,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Create incident error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const updateIncident = async (
+  currentState: CurrentState,
+  data: IncidentSchema
+): Promise<CurrentState> => {
+  if (!data.id) {
+    return { success: false, error: true, errorMessage: "Missing incident ID" };
+  }
+
+  const { behaviorId, studentId, givenById, comment, date, id } = data;
+
+  try {
+    await prisma.incident.update({
+      where: { id },
+      data: {
+        behaviorId,
+        studentId,
+        givenById,
+        comment,
+        date,
+      },
+    });
+
+    return { success: true, error: false };
+  } catch (err: any) {
+    console.error("Update incident error:", err);
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
+
+export const deleteIncident = async (
+  currentState: CurrentState,
+  data: FormData
+): Promise<CurrentState> => {
+  const id = Number(data.get("id"));
+  try {
+    await prisma.incident.delete({ where: { id } });
+    return { success: true, error: false };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: true,
+      errorMessage: createErrorMessage(err),
+    };
+  }
+};
