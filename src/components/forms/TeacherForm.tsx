@@ -210,16 +210,22 @@ const TeacherForm = ({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
-            <input
+            <select
               {...register("bloodType")}
               defaultValue={data?.bloodType}
               className="w-full p-2 border rounded"
-            />
-            {errors.bloodType && (
-              <p className="text-xs text-red-500 mt-1">
-                {errors.bloodType.message}
-              </p>
-            )}
+            >
+              <option value="">Select Blood Type</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
+            {errors.bloodType && <p className="text-red-500 text-xs mt-1">{errors.bloodType.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Birthday</label>
