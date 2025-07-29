@@ -309,7 +309,6 @@ const FinanceListPage = async ({
                   table="fee" 
                   type="update" 
                   data={item} 
-                  // relatedData={{ students, feeTypes }}
                 />
                 <FormContainer table="fee" type="delete" id={item.id} />
               </>

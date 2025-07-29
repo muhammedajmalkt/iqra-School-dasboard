@@ -2,9 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
-import { useFormState } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { attendanceSchema, type AttendanceSchema } from "@/lib/formValidationSchemas";
 import { createAttendance, updateAttendance } from "@/lib/actions";
@@ -29,28 +28,36 @@ const AttendanceForm = ({
     resolver: zodResolver(attendanceSchema),
     defaultValues: {
       id: data?.id || "",
-      date: data?.date ? new Date(data.date).toISOString().split("T")[0] : "",
-      present: data?.present || false,
+      date: data?.date ? new Date(data.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      present: data?.present ?? true,
       studentId: data?.studentId || "",
-      lessonId: data?.lessonId || "",
     },
   });
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createAttendance : updateAttendance,
-    {
-      success: false,
-      error: false,
-      errorMessage: "",
-    }
+    { success: false, error: false, errorMessage: "" }
+  );
+  const router = useRouter();
+  const { students = [] } = relatedData || {};
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const filteredStudents = students.filter((student: { id: string; name: string }) =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const router = useRouter();
-  const { students = [], lessons = [] } = relatedData || {};
+ const onSubmit = handleSubmit(
+  (formData) => {
+    startTransition(() => {
+      formAction(formData); 
+    });
+  },
+  (formErrors) => {
+    console.log("VALIDATION ERRORS", formErrors); 
+  }
+);
 
-  const onSubmit = handleSubmit((formData) => {
-    formAction(formData);
-  });
 
   useEffect(() => {
     if (state.success) {
@@ -107,41 +114,54 @@ const AttendanceForm = ({
 
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">Related Information</legend>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Student</label>
-            <select
-              {...register("studentId")}
-              className="w-full p-2 border rounded"
-              required
-            >
-              <option value="">Select Student</option>
-              {students?.map((student: { id: string; name: string }) => (
-                <option key={student.id} value={student.id}>
-                  {student.name}
-                </option>
-              ))}
-            </select>
+            <Controller
+              name="studentId"
+              control={control}
+              render={({ field }) => (
+                <div className="relative">
+                  <div className="w-full border rounded">
+                    <input
+                      type="text"
+                      placeholder="Search students..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsOpen(true);
+                      }}
+                      onFocus={() => setIsOpen(true)}
+                      className="w-full p-2 border-b outline-none"
+                    />
+                    {isOpen && (
+                      <div className="absolute z-10 w-full bg-white border rounded-b max-h-60 overflow-y-auto">
+                        {filteredStudents.length > 0 ? (
+                          filteredStudents.map((student: { id: string; name: string }) => (
+                            <option
+                              key={student.id}
+                              value={student.id}
+                              onClick={() => {
+                                field.onChange(student.id);
+                                setSearchTerm(student.name);
+                                setIsOpen(false);
+                              }}
+                              className="p-2 hover:bg-gray-100 cursor-pointer"
+                            >
+                              {student.name}
+                            </option>
+                          ))
+                        ) : (
+                          <div className="p-2 text-gray-500">No students found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            />
             {errors.studentId && (
               <p className="text-xs text-red-500 mt-1">{errors.studentId.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Lesson</label>
-            <select
-              {...register("lessonId")}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select Lesson</option>
-              {lessons?.map((lesson: { id: number; title: string }) => (
-                <option key={lesson.id} value={lesson.id}>
-                  {lesson.title}
-                </option>
-              ))}
-            </select>
-            {errors.lessonId && (
-              <p className="text-xs text-red-500 mt-1">{errors.lessonId.message}</p>
             )}
           </div>
         </div>

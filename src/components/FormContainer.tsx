@@ -401,6 +401,20 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         ]);
 
         relatedData = { behaviors, students, currentUserId };
+         break;
+      }
+      case "fee": {
+        const studentClasses = await prisma.student.findMany({
+          select: { id: true, name: true },
+        });
+          const feeType = await prisma.feeType.findMany({
+          select: { id: true, name: true ,defaultAmount:true },
+        });
+
+        relatedData = {
+          students:studentClasses,
+          feeTypes:feeType
+        };
         break;
       }
       default:

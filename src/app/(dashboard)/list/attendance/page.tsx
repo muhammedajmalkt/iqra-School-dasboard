@@ -1,19 +1,16 @@
-// IMPORTS
 import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Attendance, Prisma, Student, Lesson } from "@prisma/client";
+import { Attendance, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
-// TYPES
 type AttendanceList = Attendance & {
   student: Student;
-  lesson: Lesson;
 };
 
 const AttendanceListPage = async ({
@@ -31,12 +28,6 @@ const AttendanceListPage = async ({
 
   const query: Prisma.AttendanceWhereInput = {};
 
-  // Fetch all lessons for the filter dropdown
-  const lessons = await prisma.lesson.findMany({
-    orderBy: { name: "asc" },
-  });
-
-  // Check if we want all records (explicit filter with showAll=true)
   const showAllRecords = queryParams.showAll === "true";
 
   if (queryParams) {
@@ -46,7 +37,6 @@ const AttendanceListPage = async ({
           case "search":
             query.OR = [
               { student: { name: { contains: value, mode: "insensitive" } } },
-              { lesson: { name: { contains: value, mode: "insensitive" } } },
             ];
             break;
           case "present":
@@ -65,13 +55,7 @@ const AttendanceListPage = async ({
               };
             }
             break;
-          case "lessonId": // New case for lesson filtering
-            if (value) {
-              query.lessonId = Number(value);
-            }
-            break;
           case "showAll":
-            // Don't apply date filter when showAll is true
             break;
           default:
             break;
@@ -80,14 +64,11 @@ const AttendanceListPage = async ({
     }
   }
 
-  // Apply default date filter only if no explicit filters are set
-  // and showAll is not true
   if (
     !showAllRecords &&
     !queryParams.date &&
     !queryParams.search &&
-    !queryParams.present &&
-    !queryParams.lessonId
+    !queryParams.present
   ) {
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
@@ -98,44 +79,32 @@ const AttendanceListPage = async ({
     };
   }
 
-  // Handle sorting - prioritize by present status, then by student name for today's view
   const currentSort =
     queryParams.sort ||
-    (showAllRecords ||
-    queryParams.search ||
-    queryParams.present ||
-    queryParams.lessonId
+    (showAllRecords || queryParams.search || queryParams.present
       ? "date_desc"
       : "present_desc");
 
- const orderBy: Prisma.Enumerable<Prisma.AttendanceOrderByWithRelationInput> = (() => {
-  switch (currentSort) {
-    case "date_asc":
-      return { date: "asc" };
-    case "date_desc":
-      return { date: "desc" };
-    case "student_asc":
-      return { student: { name: "asc" } };
-    case "student_desc":
-      return { student: { name: "desc" } };
-    case "lesson_asc":
-      return { lesson: { name: "asc" } };
-    case "lesson_desc":
-      return { lesson: { name: "desc" } };
-    case "present_asc":
-      return [{ present: "asc" }, { student: { name: "asc" } }];
-    case "present_desc":
-      return [{ present: "desc" }, { student: { name: "asc" } }];
-    default:
-      return showAllRecords ||
-        queryParams.search ||
-        queryParams.present ||
-        queryParams.lessonId
-        ? { date: "desc" }
-        : [{ present: "desc" }, { student: { name: "asc" } }];
-  }
-})();
-
+  const orderBy: Prisma.Enumerable<Prisma.AttendanceOrderByWithRelationInput> = (() => {
+    switch (currentSort) {
+      case "date_asc":
+        return { date: "asc" };
+      case "date_desc":
+        return { date: "desc" };
+      case "student_asc":
+        return { student: { name: "asc" } };
+      case "student_desc":
+        return { student: { name: "desc" } };
+      case "present_asc":
+        return [{ present: "asc" }, { student: { name: "asc" } }];
+      case "present_desc":
+        return [{ present: "desc" }, { student: { name: "asc" } }];
+      default:
+        return showAllRecords || queryParams.search || queryParams.present
+          ? { date: "desc" }
+          : [{ present: "desc" }, { student: { name: "asc" } }];
+    }
+  })();
 
   const [data, count] = await prisma.$transaction([
     prisma.attendance.findMany({
@@ -143,7 +112,6 @@ const AttendanceListPage = async ({
       orderBy,
       include: {
         student: true,
-        lesson: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
@@ -153,7 +121,6 @@ const AttendanceListPage = async ({
 
   const columns = [
     { header: "Student", accessor: "student" },
-    { header: "Lesson", accessor: "lesson", className: "hidden md:table-cell" },
     { header: "Date", accessor: "date", className: "hidden lg:table-cell" },
     { header: "Status", accessor: "present" },
     ...(role === "admin" || role === "teacher"
@@ -170,27 +137,6 @@ const AttendanceListPage = async ({
         <div className="flex flex-col">
           <h3 className="font-semibold">{item.student.name}</h3>
           <p className="text-xs text-gray-500">{item.student.email}</p>
-        </div>
-      </td>
-      <td className="hidden md:table-cell">
-        <div className="flex flex-col">
-          <span className="font-medium">{item.lesson.name}</span>
-          <span className="text-xs text-gray-500">
-            {item.lesson.startTime && item.lesson.endTime
-              ? `${new Date(item.lesson.startTime).toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: true,
-                })} - ${new Date(item.lesson.endTime).toLocaleTimeString(
-                  "en-US",
-                  {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  }
-                )}`
-              : "Time not set"}
-          </span>
         </div>
       </td>
       <td className="hidden lg:table-cell">
@@ -237,10 +183,8 @@ const AttendanceListPage = async ({
     { value: "present_asc", label: "Absent First" },
     { value: "student_asc", label: "Student A-Z" },
     { value: "student_desc", label: "Student Z-A" },
-    { value: "date_desc", label: "Latest First" },
     { value: "date_asc", label: "Oldest First" },
-    { value: "lesson_asc", label: "Lesson A-Z" },
-    { value: "lesson_desc", label: "Lesson Z-A" },
+    { value: "date_desc", label: "Latest First" },
   ];
 
   const attendanceStats = {
@@ -249,20 +193,15 @@ const AttendanceListPage = async ({
     absent: data.filter((item) => !item.present).length,
     presentPercentage:
       count > 0
-        ? (
-            (data.filter((item) => item.present).length / data.length) *
-            100
-          ).toFixed(1)
+        ? ((data.filter((item) => item.present).length / data.length) * 100).toFixed(1)
         : 0,
   };
 
-  // Determine the current view for display
   const isToday =
     !showAllRecords &&
     !queryParams.date &&
     !queryParams.search &&
-    !queryParams.present &&
-    !queryParams.lessonId;
+    !queryParams.present;
   const isYesterday =
     queryParams.date ===
     new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -270,10 +209,9 @@ const AttendanceListPage = async ({
     queryParams.date &&
     !isYesterday &&
     queryParams.date !== new Date().toISOString().split("T")[0];
-  console.log("isToday", isToday);
+
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      {/* TOP */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-col">
           <h1 className="hidden md:block text-lg font-semibold">
@@ -309,18 +247,11 @@ const AttendanceListPage = async ({
               : showAllRecords
               ? "All attendance records from all dates"
               : "Filtered attendance records"}
-            {queryParams.lessonId &&
-              ` | Lesson: ${
-                lessons.find(
-                  (lesson) => lesson.id === Number(queryParams.lessonId)
-                )?.name
-              }`}
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
                 <Image src="/sort.png" alt="Sort" width={14} height={14} />
@@ -347,7 +278,6 @@ const AttendanceListPage = async ({
               </div>
             </div>
 
-            {/* FILTER BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
                 <Image src="/filter.png" alt="Filter" width={14} height={14} />
@@ -364,7 +294,6 @@ const AttendanceListPage = async ({
                           search: queryParams.search,
                           sort: queryParams.sort,
                           present: queryParams.present,
-                          lessonId: queryParams.lessonId,
                           date: new Date().toISOString().split("T")[0],
                         })}`}
                         className={`px-3 py-2 text-xs rounded font-medium ${
@@ -373,14 +302,13 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Today&apos;s Attendance
+                        📅 Today's Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
                           search: queryParams.search,
                           sort: queryParams.sort,
                           present: queryParams.present,
-                          lessonId: queryParams.lessonId,
                           date: new Date(Date.now() - 24 * 60 * 60 * 1000)
                             .toISOString()
                             .split("T")[0],
@@ -391,14 +319,13 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Yesterday&apos;s Attendance
+                        📅 Yesterday's Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
                           search: queryParams.search,
                           sort: queryParams.sort,
                           present: queryParams.present,
-                          lessonId: queryParams.lessonId,
                           showAll: "true",
                         })}`}
                         className={`px-3 py-2 text-xs rounded font-medium ${
@@ -410,7 +337,6 @@ const AttendanceListPage = async ({
                         📊 All Records
                       </Link>
 
-                      {/* Custom Date Picker */}
                       <div className="mt-2 pt-2 border-t border-gray-200">
                         <label className="block text-xs font-medium text-gray-600 mb-1">
                           📆 Select Specific Date:
@@ -420,7 +346,6 @@ const AttendanceListPage = async ({
                           action="/list/attendance"
                           className="flex gap-1"
                         >
-                          {/* Preserve existing query params */}
                           {queryParams.search && (
                             <input
                               type="hidden"
@@ -440,13 +365,6 @@ const AttendanceListPage = async ({
                               type="hidden"
                               name="present"
                               value={queryParams.present}
-                            />
-                          )}
-                          {queryParams.lessonId && (
-                            <input
-                              type="hidden"
-                              name="lessonId"
-                              value={queryParams.lessonId}
                             />
                           )}
                           <input
@@ -479,74 +397,6 @@ const AttendanceListPage = async ({
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="mb-3 border-t pt-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      🎓 Lesson Filter
-                    </label>
-                    <form
-                      method="GET"
-                      action="/list/attendance"
-                      className="flex gap-2 flex-col sm:flex-row"
-                    >
-                      {/* Preserve other query params */}
-                      {queryParams.search && (
-                        <input
-                          type="hidden"
-                          name="search"
-                          value={queryParams.search}
-                        />
-                      )}
-                      {queryParams.sort && (
-                        <input
-                          type="hidden"
-                          name="sort"
-                          value={queryParams.sort}
-                        />
-                      )}
-                      {queryParams.present && (
-                        <input
-                          type="hidden"
-                          name="present"
-                          value={queryParams.present}
-                        />
-                      )}
-                      {queryParams.date && (
-                        <input
-                          type="hidden"
-                          name="date"
-                          value={queryParams.date}
-                        />
-                      )}
-                      {queryParams.showAll && (
-                        <input
-                          type="hidden"
-                          name="showAll"
-                          value={queryParams.showAll}
-                        />
-                      )}
-
-                      <select
-                        name="lessonId"
-                        defaultValue={queryParams.lessonId || ""}
-                        className="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 scrollbar-hide"
-                      >
-                        <option value="">All Lessons</option>
-                        {lessons.map((lesson) => (
-                          <option key={lesson.id} value={lesson.id}>
-                            {lesson.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <button
-                        type="submit"
-                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                      >
-                        Apply
-                      </button>
-                    </form>
                   </div>
 
                   <div className="mb-2 border-t pt-2">
@@ -583,10 +433,7 @@ const AttendanceListPage = async ({
                     </div>
                   </div>
 
-                  {(queryParams.present ||
-                    queryParams.date ||
-                    queryParams.lessonId ||
-                    showAllRecords) && (
+                  {(queryParams.present || queryParams.date || showAllRecords) && (
                     <div className="border-t pt-2">
                       <Link
                         href="/list/attendance"
@@ -611,7 +458,6 @@ const AttendanceListPage = async ({
         </div>
       </div>
 
-      {/* STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="bg-blue-50 p-3 rounded-lg">
           <h3 className="text-sm font-medium text-blue-800">Total Records</h3>
@@ -641,10 +487,8 @@ const AttendanceListPage = async ({
         </div>
       </div>
 
-      {/* TABLE */}
       <Table columns={columns} renderRow={renderRow} data={data} />
 
-      {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
   );
