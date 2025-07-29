@@ -70,6 +70,7 @@ export const studentSchema = z.object({
     .optional()
     .or(z.literal("")),
   phone: z.string().optional(),
+  rollNo: z.number().min(1, { message: "Roll number must be at least 1" }),
   address: z.string(),
   img: z.string().optional(),
   bloodType: z.string().min(1, { message: "Blood Type is required!" }),
@@ -231,7 +232,6 @@ export const teacherAttendanceSchema = z.object({
     .refine((val) => !isNaN(Date.parse(val)), {
       message: "Invalid date format",
     }),
-  lessonId: z.coerce.number().min(1, "Lesson is required"),
   attendances: z
     .array(
       z.object({

@@ -271,7 +271,6 @@ export const deleteFee = async (
       where: { id: parseInt(id) },
     });
 
-    revalidatePath("/list/finance");
     return { success: true, error: false };
   } catch (err) {
     console.error("Error deleting fee:", err);
@@ -472,6 +471,7 @@ export const createStudent = async (
         name: data.name,
         surname: data.surname,
         email: data.email || null,
+        rollNo:data.rollNo,
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
@@ -567,6 +567,7 @@ export const updateStudent = async (
         parentId: data.parentId,
         classId: Number(data.classId),
         gradeId: Number(data.gradeId),
+        rollNo: data.rollNo, 
       },
     });
 

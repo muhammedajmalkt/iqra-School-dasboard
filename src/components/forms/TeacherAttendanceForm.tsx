@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { type Dispatch, type SetStateAction, useActionState, useEffect } from "react";
+import { type Dispatch, type SetStateAction, startTransition, useActionState, useEffect } from "react";
 import { createAttendances } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -40,6 +40,7 @@ const TeacherAttendanceForm = ({
         })) || [],
     },
   });
+  
   const { fields } = useFieldArray({
     control,
     name: "attendances",
@@ -64,8 +65,13 @@ const TeacherAttendanceForm = ({
   const { students = [] } = relatedData || {};
 
   const onSubmit = handleSubmit((formData) => {
-    formAction(formData);
-  });
+    startTransition(() => {
+      formAction(formData); 
+    });
+  },
+  (formErrors) => {
+    console.log("VALIDATION ERRORS", formErrors); 
+    })
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">

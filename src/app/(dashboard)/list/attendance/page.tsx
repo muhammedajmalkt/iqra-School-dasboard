@@ -302,7 +302,7 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Today's Attendance
+                        📅 Today&apos;s Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
@@ -319,7 +319,7 @@ const AttendanceListPage = async ({
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
                         }`}
                       >
-                        📅 Yesterday's Attendance
+                        📅 Yesterday&apos;s Attendance
                       </Link>
                       <Link
                         href={`/list/attendance?${getQueryString({
@@ -495,3 +495,4 @@ const AttendanceListPage = async ({
 };
 
 export default AttendanceListPage;
+

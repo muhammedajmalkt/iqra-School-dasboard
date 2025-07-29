@@ -21,6 +21,7 @@ model Student {
   phone       String?      @unique
   address     String
   img         String?
+  rollNo      Int          @default(0)
   bloodType   String
   sex         UserSex
   createdAt   DateTime     @default(now())
