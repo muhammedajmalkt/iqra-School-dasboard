@@ -69,13 +69,13 @@ const menuItems = [
         icon: "/behavior.png",
         label: "Behaviors",
         href: "/list/behavior",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "teacher"],
       },
       {
         icon: "/incident.png",
         label: "Incidents",
         href: "/list/incident",
-        visible: ["admin", "teacher", "student", "parent"],
+        visible: ["admin", "teacher"],
       },
       {
         icon: "/attendance.png",

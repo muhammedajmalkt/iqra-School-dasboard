@@ -9,9 +9,20 @@ import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 
+// Define a more specific type for IncidentList to match the selected fields
 type IncidentList = Incident & {
-  behavior: Behavior;
-  student: Student;
+  behavior: Pick<Behavior, "title" | "point" | "isNegative">;
+  student: Pick<Student, "name" | "surname">;
+};
+
+type SummaryItem = {
+  studentId: string;
+  studentName: string;
+  className: string;
+  gender: string;
+  phone: string | null;
+  totalPoints: number;
+  totalIncidents: number;
 };
 
 const IncidentListPage = async ({
@@ -26,36 +37,70 @@ const IncidentListPage = async ({
     {
       header: "Student",
       accessor: "student",
+      className: "text-center", // Center-align header
     },
     {
       header: "Behavior",
       accessor: "behavior",
-      className: "hidden md:table-cell",
+      className: "text-center hidden md:table-cell", // Center-align and keep responsive behavior
     },
-
     {
       header: "Points",
       accessor: "points",
-      className: "hidden lg:table-cell",
+      className: "text-center hidden lg:table-cell", // Center-align and keep responsive behavior
     },
     {
       header: "Date",
       accessor: "date",
-      className: "hidden lg:table-cell",
+      className: "text-center hidden lg:table-cell", // Center-align and keep responsive behavior
     },
     {
       header: "Comment",
       accessor: "comment",
-      className: "hidden xl:table-cell",
+      className: "text-center hidden xl:table-cell", // Center-align and keep responsive behavior
     },
     ...(role === "admin" || role === "teacher"
       ? [
           {
             header: "Actions",
             accessor: "action",
+            className: "text-center", // Center-align header
           },
         ]
       : []),
+  ];
+
+  const summaryColumns = [
+    {
+      header: "Student Name",
+      accessor: "studentName",
+      className: "text-center", // Center-align header
+    },
+    {
+      header: "Class",
+      accessor: "className",
+      className: "text-center", // Center-align header
+    },
+    {
+      header: "Gender",
+      accessor: "gender",
+      className: "text-center", // Center-align header
+    },
+    {
+      header: "Phone",
+      accessor: "phone",
+      className: "text-center", // Center-align header
+    },
+    {
+      header: "Total Points",
+      accessor: "totalPoints",
+      className: "text-center", // Center-align header
+    },
+    {
+      header: "Total Incidents",
+      accessor: "totalIncidents",
+      className: "text-center", // Center-align header
+    },
   ];
 
   const renderRow = (item: IncidentList) => (
@@ -63,11 +108,11 @@ const IncidentListPage = async ({
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="flex items-center gap-4 p-4">
+      <td className="flex items-center justify-center gap-4 p-4">
         {item.student.name} {item.student.surname}
       </td>
-      <td className="hidden md:table-cell">{item.behavior.title}</td>
-      <td className="hidden lg:table-cell">
+      <td className="hidden md:table-cell text-center">{item.behavior.title}</td>
+      <td className="hidden lg:table-cell text-center">
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${
             item.behavior.isNegative
@@ -80,16 +125,16 @@ const IncidentListPage = async ({
             : `+${item.behavior.point}`}
         </span>
       </td>
-      <td className="hidden lg:table-cell">
+      <td className="hidden lg:table-cell text-center">
         {new Date(item.date).toLocaleDateString()}
       </td>
-      <td className="hidden xl:table-cell">
-        <div className="max-w-[150px] truncate" title={item.comment}>
+      <td className="hidden xl:table-cell text-center">
+        <div className="max-w-[150px] mx-auto truncate" title={item.comment}>
           {item.comment}
         </div>
       </td>
       <td>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {(role === "admin" || role === "teacher") && (
             <>
               <FormContainer table="incident" type="update" data={item} />
@@ -101,35 +146,50 @@ const IncidentListPage = async ({
     </tr>
   );
 
+  const renderSummaryRow = (item: SummaryItem) => (
+    <tr
+      key={item.studentId}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
+      <td className="p-4 text-center">{item.studentName}</td>
+      <td className="p-4 text-center">{item.className}</td>
+      <td className="p-4 text-center">{item.gender}</td>
+      <td className="p-4 text-center">{item.phone || "N/A"}</td>
+      <td className="p-4 text-center">{item.totalPoints}</td>
+      <td className="p-4 text-center">{item.totalIncidents}</td>
+    </tr>
+  );
+
   const resolvedSearchParams = await searchParams;
-  const { page, ...queryParams } = resolvedSearchParams;
+  const { page, view, ...queryParams } = resolvedSearchParams;
+  const isSummary = view === "summary";
   const p = page ? parseInt(page) : 1;
 
-  // URL PARAMS CONDITION
-  const query: Prisma.IncidentWhereInput = {};
+  // URL PARAMS CONDITION for Incidents
+  const incidentQuery: Prisma.IncidentWhereInput = {};
 
   if (queryParams) {
     for (const [key, value] of Object.entries(queryParams)) {
       if (value !== undefined) {
         switch (key) {
           case "studentId":
-            query.studentId = value;
+            incidentQuery.studentId = value;
             break;
           case "behaviorId":
-            query.behaviorId = parseInt(value);
+            incidentQuery.behaviorId = parseInt(value);
             break;
           case "givenById":
-            query.givenById = value;
+            incidentQuery.givenById = value;
             break;
           case "type":
             if (value === "positive") {
-              query.behavior = { isNegative: false };
+              incidentQuery.behavior = { isNegative: false };
             } else if (value === "negative") {
-              query.behavior = { isNegative: true };
+              incidentQuery.behavior = { isNegative: true };
             }
             break;
           case "search":
-            query.OR = [
+            incidentQuery.OR = [
               { behavior: { title: { contains: value, mode: "insensitive" } } },
               { comment: { contains: value, mode: "insensitive" } },
               {
@@ -149,7 +209,7 @@ const IncidentListPage = async ({
     }
   }
 
-  // Handle sorting
+  // Handle sorting for detailed view
   const currentSort = queryParams.sort || "date_desc";
   const orderBy: Prisma.IncidentOrderByWithRelationInput = (() => {
     switch (currentSort) {
@@ -174,19 +234,96 @@ const IncidentListPage = async ({
     }
   })();
 
-  const [data, count] = await prisma.$transaction([
-    prisma.incident.findMany({
-      where: query,
-      orderBy,
+  let data: IncidentList[] | SummaryItem[] = [];
+  let count: number = 0;
+
+  if (isSummary) {
+    // Fetch aggregated data for summary view
+    const studentQuery: Prisma.StudentWhereInput = {};
+
+    // If studentId is provided, filter students by id
+    if (queryParams.studentId) {
+      studentQuery.id = queryParams.studentId;
+    }
+
+    // If search is provided, include it in student filtering
+    if (queryParams.search) {
+      studentQuery.OR = [
+        { name: { contains: queryParams.search, mode: "insensitive" } },
+        { surname: { contains: queryParams.search, mode: "insensitive" } },
+      ];
+    }
+
+    const summaryData = await prisma.student.findMany({
+      where: studentQuery,
       include: {
-        behavior: { select: { title: true, point: true, isNegative: true } },
-        student: { select: { name: true, surname: true } },
+        class: { select: { name: true } },
+        Incident: {
+          where: incidentQuery,
+          include: {
+            behavior: { select: { point: true, isNegative: true } },
+          },
+        },
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
-    }),
-    prisma.incident.count({ where: query }),
-  ]);
+      orderBy: (() => {
+        switch (currentSort) {
+          case "student_asc":
+            return { name: "asc" };
+          case "student_desc":
+            return { name: "desc" };
+          case "points_asc":
+          case "points_desc":
+            // Sorting by points requires aggregation, handle in client-side
+            return { name: "asc" }; // Fallback to name sorting
+          default:
+            return { name: "asc" }; // Default sort for summary
+        }
+      })(),
+    });
+
+    data = summaryData.map((student) => ({
+      studentId: student.id,
+      studentName: `${student.name} ${student.surname}`,
+      className: student.class.name,
+      gender: student.sex,
+      phone: student.phone,
+      totalPoints: student.Incident.reduce((sum, incident) => {
+        const points = incident.behavior.isNegative
+          ? -incident.behavior.point
+          : incident.behavior.point;
+        return sum + points;
+      }, 0),
+      totalIncidents: student.Incident.length,
+    }));
+
+    // Sort by totalPoints if requested
+    if (currentSort === "points_asc") {
+      data.sort((a, b) => a.totalPoints - b.totalPoints);
+    } else if (currentSort === "points_desc") {
+      data.sort((a, b) => b.totalPoints - a.totalPoints);
+    }
+
+    count = await prisma.student.count({
+      where: studentQuery,
+    });
+  } else {
+    // Fetch detailed incident data
+    [data, count] = await prisma.$transaction([
+      prisma.incident.findMany({
+        where: incidentQuery,
+        orderBy,
+        include: {
+          behavior: { select: { title: true, point: true, isNegative: true } },
+          student: { select: { name: true, surname: true } },
+        },
+        take: ITEM_PER_PAGE,
+        skip: ITEM_PER_PAGE * (p - 1),
+      }),
+      prisma.incident.count({ where: incidentQuery }),
+    ]);
+  }
 
   const getQueryString = (params: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
@@ -203,8 +340,8 @@ const IncidentListPage = async ({
     { value: "student_desc", label: "Student Z-A" },
     { value: "behavior_asc", label: "Behavior A-Z" },
     { value: "behavior_desc", label: "Behavior Z-A" },
-    { value: "points_desc", label: "Highest Points" },
     { value: "points_asc", label: "Lowest Points" },
+    { value: "points_desc", label: "Highest Points" },
   ];
 
   const filterOptions = [
@@ -221,6 +358,17 @@ const IncidentListPage = async ({
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
+            {/* TOGGLE BUTTON */}
+            <Link
+              href={`/list/incident?${getQueryString({
+                ...queryParams,
+                page,
+                view: isSummary ? undefined : "summary",
+              })}`}
+              className="text-sm px-4 py-2 rounded-md bg-lamaYellow hover:bg-yellow-400 transition-colors"
+            >
+              {isSummary ? "Show Details" : "Show Summary"}
+            </Link>
             {/* SORT BUTTON */}
             <div className="relative group">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow hover:bg-yellow-400 transition-colors">
@@ -231,7 +379,7 @@ const IncidentListPage = async ({
                   {sortOptions.map((option) => (
                     <Link
                       key={option.value}
-                      href={`/list/incidents?${getQueryString({
+                      href={`/list/incident?${getQueryString({
                         ...queryParams,
                         sort: option.value,
                       })}`}
@@ -258,7 +406,7 @@ const IncidentListPage = async ({
                   {filterOptions.map((option) => (
                     <Link
                       key={option.value}
-                      href={`/list/incidents?${getQueryString({
+                      href={`/list/incident?${getQueryString({
                         ...queryParams,
                         type: option.value || undefined,
                       })}`}
@@ -282,7 +430,12 @@ const IncidentListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
+      {!isSummary ? (
+        <Table columns={columns} renderRow={renderRow} data={data as IncidentList[]} />
+      ) : (
+        <Table columns={summaryColumns} renderRow={renderSummaryRow} data={data as SummaryItem[]} />
+      )}
+
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
