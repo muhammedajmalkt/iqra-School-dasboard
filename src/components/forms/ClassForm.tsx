@@ -113,7 +113,7 @@ const ClassForm = ({
               {...register("supervisorId")}
               className="w-full p-2 border rounded"
             >
-              <option value="">Select a supervisor (Optional)</option>
+              <option value="">Select a supervisor</option>
               {teachers.map(
                 (teacher: { id: string; name: string; surname: string }) => (
                   <option value={teacher.id} key={teacher.id}>
