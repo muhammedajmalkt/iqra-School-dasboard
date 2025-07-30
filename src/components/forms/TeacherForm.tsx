@@ -2,9 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import InputField from "../InputField";
 import Image from "next/image";
-import { type Dispatch, type SetStateAction, startTransition, useEffect, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useTransition,
+  useEffect,
+  useState,
+} from "react";
 import { teacherSchema, type TeacherSchema } from "@/lib/formValidationSchemas";
 import { useActionState } from "react";
 import { createTeacher, updateTeacher } from "@/lib/actions";
@@ -27,8 +32,6 @@ const TeacherForm = ({
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    watch,
   } = useForm<TeacherSchema>({
     resolver: zodResolver(teacherSchema),
   });
@@ -38,14 +41,16 @@ const TeacherForm = ({
     data?.subjects?.map((subject: any) => subject.id.toString()) || []
   );
 
-
   const [state, formAction] = useActionState(
-    type === "create" ? createTeacher : createTeacher,
+    type === "create" ? createTeacher : updateTeacher,
     { success: false, error: false }
   );
 
-    const onSubmit = handleSubmit((formData) => {
-      const submitData = {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const onSubmit = handleSubmit((formData) => {
+    const submitData = {
       ...formData,
       img: img?.secure_url,
       subjects: selectedSubjects,
@@ -55,35 +60,13 @@ const TeacherForm = ({
     });
   });
 
-  const router = useRouter();
-
   useEffect(() => {
     if (state.success) {
-      toast(`Teacher has been ${type === "create" ? "created" : "updated"}!`);
+      toast(`Teacher ${type === "create" ? "created" : "updated"} successfully!`);
       setOpen(false);
       router.refresh();
     }
   }, [state, router, type, setOpen]);
-
-  // Set default values for update
-  useEffect(() => {
-    if (type === "update" && data) {
-      setValue("username", data.username);
-      setValue("name", data.name);
-      setValue("surname", data.surname);
-      setValue("email", data.email);
-      setValue("phone", data.phone);
-      setValue("address", data.address);
-      setValue("bloodType", data.bloodType);
-      setValue("sex", data.sex);
-      if (data.birthday) {
-        setValue("birthday", new Date(data.birthday));
-      }
-      if (data.id) {
-        setValue("id", data.id);
-      }
-    }
-  }, [data, setValue, type]);
 
   const { subjects } = relatedData || { subjects: [] };
 
@@ -94,6 +77,8 @@ const TeacherForm = ({
       setSelectedSubjects(selectedSubjects.filter((id) => id !== subjectId));
     }
   };
+
+  console.log(state);
 
   return (
     <form
@@ -117,7 +102,7 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.username && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.username.message}
               </p>
             )}
@@ -125,31 +110,31 @@ const TeacherForm = ({
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
+              type="email"
               {...register("email")}
               defaultValue={data?.email}
               className="w-full p-2 border rounded"
             />
             {errors.email && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.email.message}
               </p>
             )}
           </div>
-          {type === "create" && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
-              <input
-                type="password"
-                {...register("password")}
-                className="w-full p-2 border rounded"
-              />
-              {errors.password && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input
+              type="password"
+              {...register("password")}
+              defaultValue={data?.password}
+              className="w-full p-2 border rounded"
+            />
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.password.message}
+              </p>
+            )}
+          </div>
         </div>
       </fieldset>
 
@@ -166,7 +151,7 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.name && (
-              <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
             )}
           </div>
           <div>
@@ -177,7 +162,7 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.surname && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.surname.message}
               </p>
             )}
@@ -190,7 +175,7 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.phone && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.phone.message}
               </p>
             )}
@@ -203,20 +188,30 @@ const TeacherForm = ({
               className="w-full p-2 border rounded"
             />
             {errors.address && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.address.message}
               </p>
             )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
-            <input
+            <select
               {...register("bloodType")}
               defaultValue={data?.bloodType}
               className="w-full p-2 border rounded"
-            />
+            >
+              <option value="">Select Blood Type</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
             {errors.bloodType && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.bloodType.message}
               </p>
             )}
@@ -226,15 +221,12 @@ const TeacherForm = ({
             <input
               type="date"
               {...register("birthday")}
-              defaultValue={
-                data?.birthday
-                  ? new Date(data.birthday).toISOString().split("T")[0]
-                  : ""
-              }
+              defaultValue={data?.birthday?.toISOString?.()?.split("T")[0] || 
+                (data?.birthday ? new Date(data.birthday).toISOString().split("T")[0] : "")}
               className="w-full p-2 border rounded"
             />
             {errors.birthday && (
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-red-500 text-xs mt-1">
                 {errors.birthday.message}
               </p>
             )}
@@ -244,19 +236,15 @@ const TeacherForm = ({
             <select
               {...register("sex")}
               defaultValue={data?.sex}
-              className="w-full p-2 border rounded "
+              className="w-full p-2 border rounded"
             >
-              <option value="">Select</option>
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
             </select>
             {errors.sex && (
-              <p className="text-xs text-red-500 mt-1">{errors.sex.message}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.sex.message}</p>
             )}
           </div>
-          {data?.id && (
-            <input type="hidden" {...register("id")} defaultValue={data?.id} />
-          )}
         </div>
       </fieldset>
 
@@ -271,14 +259,14 @@ const TeacherForm = ({
                 onChange={(e) =>
                   handleSubjectChange(subject.id.toString(), e.target.checked)
                 }
-                className="w-4 h-4 "
+                className="w-4 h-4"
               />
               {subject.name}
             </label>
           ))}
         </div>
         {selectedSubjects.length === 0 && (
-          <p className="text-sm text-red-500">
+          <p className="text-red-500 text-xs mt-1">
             Please select at least one subject
           </p>
         )}
@@ -287,20 +275,14 @@ const TeacherForm = ({
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium text-gray-400">Photo</legend>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
-            {img?.secure_url || data?.img ? (
-              <Image
-                src={img?.secure_url || data?.img}
-                alt="Teacher"
-                width={48}
-                height={48}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-[8px]">
-                No photo
-              </div>
-            )}
+          <div className="w-12 h-12 rounded-full overflow-hidden">
+            <Image
+              src={img?.secure_url || data?.img || "/noAvatar.png"}
+              alt=""
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+            />
           </div>
           <CldUploadWidget
             uploadPreset="school"
@@ -309,26 +291,28 @@ const TeacherForm = ({
               widget.close();
             }}
           >
-            {({ open }) => {
-              return (
-                <button
-                  type="button"
-                  onClick={() => open()}
-                  className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
-                >
-                  Upload Photo
-                </button>
-              );
-            }}
+            {({ open }) => (
+              <button
+                type="button"
+                onClick={() => open()}
+                className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+              >
+                Upload Photo
+              </button>
+            )}
           </CldUploadWidget>
         </div>
       </fieldset>
+
+      {data && (
+        <input type="hidden" {...register("id")} defaultValue={data?.id} />
+      )}
 
       {state.error && state.errorMessage && (
         <p className="text-red-500 text-sm">{state.errorMessage}</p>
       )}
 
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-4 pt-4">
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -338,10 +322,12 @@ const TeacherForm = ({
         </button>
         <button
           type="submit"
-          disabled={selectedSubjects.length === 0}
+          disabled={isPending}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {type === "create" ? "Create" : "Update"}
+          {isPending
+            ? type === "create" ? "Creating..." : "Updating..."
+            : type === "create" ? "Create" : "Update"}
         </button>
       </div>
     </form>
