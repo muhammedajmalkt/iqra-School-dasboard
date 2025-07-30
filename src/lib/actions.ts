@@ -497,7 +497,7 @@ export const createStudent = async (
         name: data.name,
         surname: data.surname,
         email: data.email || null,
-        rollNo:data.rollNo,
+        rollNo: data.rollNo,
         phone: data.phone || null,
         address: data.address,
         img: data.img || null,
@@ -593,7 +593,7 @@ export const updateStudent = async (
         parentId: data.parentId,
         classId: Number(data.classId),
         gradeId: Number(data.gradeId),
-        rollNo: data.rollNo, 
+        rollNo: data.rollNo,
       },
     });
 
@@ -1299,7 +1299,28 @@ export const createAttendance = async (
   data: AttendanceSchema
 ): Promise<CurrentState> => {
   try {
-    console.log("create atten:", data);
+    const attendanceDate = new Date(data.date);
+
+    // 1. Check if attendance already exists for the same student and date
+    const existingAttendance = await prisma.attendance.findFirst({
+      where: {
+        studentId: data.studentId,
+        date: {
+          gte: new Date(attendanceDate.setHours(0, 0, 0, 0)),
+          lt: new Date(attendanceDate.setHours(24, 0, 0, 0)),
+        },
+      },
+    });
+
+    if (existingAttendance) {
+      return {
+        success: false,
+        error: true,
+        errorMessage: "Attendance for this student on this date already exists.",
+      };
+    }
+
+    // 2. Proceed to create if not exists
     await prisma.attendance.create({
       data: {
         date: new Date(data.date),
@@ -1307,6 +1328,7 @@ export const createAttendance = async (
         studentId: data.studentId,
       },
     });
+
     return { success: true, error: false };
   } catch (err: any) {
     console.error("Create attendance error:", err);
@@ -1326,7 +1348,6 @@ export const updateAttendance = async (
       errorMessage: "Attendance ID is required for update",
     };
   }
-
   console.log("update atten:", data);
   try {
     await prisma.attendance.update({
@@ -1361,18 +1382,40 @@ export const deleteAttendance = async (
     return { success: false, error: true, errorMessage };
   }
 };
-
 export const createAttendances = async (
   currentState: CurrentState,
   data: {
     date: string;
-    lessonId: number;
     attendances: { studentId: string; present: boolean }[];
   }
 ): Promise<CurrentState> => {
   try {
     const parsedData = teacherAttendanceSchema.parse(data);
+    const attendanceDate = new Date(parsedData.date);
+    const studentIds = parsedData.attendances.map((a) => a.studentId);
 
+    // 1. Check for existing attendance records
+    const existingAttendances = await prisma.attendance.findMany({
+      where: {
+        studentId: { in: studentIds },
+        date: {
+          gte: new Date(attendanceDate.setHours(0, 0, 0, 0)),
+          lt: new Date(attendanceDate.setHours(24, 0, 0, 0)),
+        },
+      },
+    });
+
+    if (existingAttendances.length > 0) {
+      const alreadyMarked = existingAttendances.map((ea) => ea.studentId).join(", ");
+      return {
+        success: false,
+        error: true,
+        errorMessage: `Attendance already exists on the same date for the following students: ${alreadyMarked}.`,
+
+      };
+    }
+
+    // 2. Proceed with creation
     await prisma.$transaction(
       parsedData.attendances.map((attendance) =>
         prisma.attendance.create({
@@ -1380,7 +1423,6 @@ export const createAttendances = async (
             date: new Date(parsedData.date),
             present: attendance.present,
             studentId: attendance.studentId,
-            lessonId: parsedData.lessonId,
           },
         })
       )

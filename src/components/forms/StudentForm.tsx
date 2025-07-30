@@ -26,9 +26,11 @@ const StudentForm = ({
     register,
     handleSubmit,
     formState: { errors },
+    watch, // 👈 added
   } = useForm<StudentSchema>({
     resolver: zodResolver(studentSchema),
   });
+
 
   const [img, setImg] = useState<any>();
   const [state, formAction] = useActionState(
@@ -52,9 +54,9 @@ const StudentForm = ({
     }
   }, [state, router, type, setOpen]);
 
-  const { grades, classes, parents } = relatedData;
-  
-console.log(state);
+  const { grades, classes, parents, usedRollNos } = relatedData;
+
+  const selectedClassId = watch("classId") || data?.classId; // 👈 fallback to existing
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
@@ -230,19 +232,40 @@ console.log(state);
             </select>
             {errors.classId && <p className="text-red-500 text-xs mt-1">{errors.classId.message}</p>}
           </div>
+
+
           <div>
             <label className="block text-sm font-medium mb-1">Roll No</label>
-            <input
-              type="number"
-              min={1}
+            <select
               {...register("rollNo", { valueAsNumber: true })}
-              defaultValue={data?.rollNo}
+              defaultValue={data?.rollNo ?? ""}
               className="w-full p-2 border rounded"
-            />
+            >
+              <option value="">Select Roll No</option>
+              {(() => {
+                const selectedClass = classes.find(c => c.id === Number(selectedClassId));
+                if (!selectedClass) return null;
+
+                const capacity = selectedClass.capacity;
+                const used = usedRollNos[selectedClass.id] || [];
+
+                return Array.from({ length: capacity }, (_, i) => i + 1).map((roll) => {
+                  const isDisabled = used.includes(roll) && roll !== data?.rollNo;
+
+                  return (
+                    <option key={roll} value={roll} disabled={isDisabled}>
+                      {roll}
+                    </option>
+                  );
+                });
+              })()}
+            </select>
             {errors.rollNo && (
               <p className="text-red-500 text-xs mt-1">{errors.rollNo.message}</p>
             )}
           </div>
+
+
 
         </div>
       </fieldset>
@@ -310,3 +333,4 @@ console.log(state);
 };
 
 export default StudentForm;
+

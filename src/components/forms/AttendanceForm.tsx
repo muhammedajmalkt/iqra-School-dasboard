@@ -5,7 +5,10 @@ import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { attendanceSchema, type AttendanceSchema } from "@/lib/formValidationSchemas";
+import {
+  attendanceSchema,
+  type AttendanceSchema,
+} from "@/lib/formValidationSchemas";
 import { createAttendance, updateAttendance } from "@/lib/actions";
 
 const AttendanceForm = ({
@@ -28,7 +31,9 @@ const AttendanceForm = ({
     resolver: zodResolver(attendanceSchema),
     defaultValues: {
       id: data?.id || "",
-      date: data?.date ? new Date(data.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      date: data?.date
+        ? new Date(data.date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
       present: data?.present ?? true,
       studentId: data?.studentId || "",
     },
@@ -43,25 +48,27 @@ const AttendanceForm = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  const filteredStudents = students.filter((student: { id: string; name: string }) =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = students.filter(
+    (student: { id: string; name: string }) =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
- const onSubmit = handleSubmit(
-  (formData) => {
-    startTransition(() => {
-      formAction(formData); 
-    });
-  },
-  (formErrors) => {
-    console.log("VALIDATION ERRORS", formErrors); 
-  }
-);
-
+  const onSubmit = handleSubmit(
+    (formData) => {
+      startTransition(() => {
+        formAction(formData);
+      });
+    },
+    (formErrors) => {
+      console.log("VALIDATION ERRORS", formErrors);
+    }
+  );
 
   useEffect(() => {
     if (state.success) {
-      toast.success(`Attendance has been ${type === "create" ? "created" : "updated"}!`);
+      toast.success(
+        `Attendance has been ${type === "create" ? "created" : "updated"}!`
+      );
       setOpen(false);
       router.refresh();
     }
@@ -74,7 +81,9 @@ const AttendanceForm = ({
       </h2>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Attendance Information</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Attendance Information
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Date</label>
@@ -106,70 +115,80 @@ const AttendanceForm = ({
               )}
             />
             {errors.present && (
-              <p className="text-xs text-red-500 mt-1">{errors.present.message}</p>
+              <p className="text-xs text-red-500 mt-1">
+                {errors.present.message}
+              </p>
             )}
           </div>
         </div>
       </fieldset>
 
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Related Information</legend>
-        <div className="grid grid-cols-1 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Student</label>
-            <Controller
-              name="studentId"
-              control={control}
-              render={({ field }) => (
-                <div className="relative">
-                  <div className="w-full border rounded">
-                    <input
-                      type="text"
-                      placeholder="Search students..."
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setIsOpen(true);
-                      }}
-                      onFocus={() => setIsOpen(true)}
-                      className="w-full p-2 border-b outline-none"
-                    />
-                    {isOpen && (
-                      <div className="absolute z-10 w-full bg-white border rounded-b max-h-60 overflow-y-auto">
-                        {filteredStudents.length > 0 ? (
-                          filteredStudents.map((student: { id: string; name: string }) => (
-                            <option
-                              key={student.id}
-                              value={student.id}
-                              onClick={() => {
-                                field.onChange(student.id);
-                                setSearchTerm(student.name);
-                                setIsOpen(false);
-                              }}
-                              className="p-2 hover:bg-gray-100 cursor-pointer"
-                            >
-                              {student.name}
-                            </option>
-                          ))
-                        ) : (
-                          <div className="p-2 text-gray-500">No students found</div>
-                        )}
-                      </div>
-                    )}
+      {type == "create" && (
+        <fieldset className="space-y-4">
+          <legend className="text-sm font-medium text-gray-400">
+            Related Information
+          </legend>
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Student</label>
+              <Controller
+                name="studentId"
+                control={control}
+                render={({ field }) => (
+                  <div className="relative">
+                    <div className="w-full border rounded">
+                      <input
+                        type="text"
+                        placeholder="Search students..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setIsOpen(true);
+                        }}
+                        onFocus={() => setIsOpen(true)}
+                        className="w-full p-2 border-b outline-none"
+                      />
+                      {isOpen && (
+                        <div className="absolute z-10 w-full bg-white border rounded-b max-h-72 overflow-y-auto">
+                          {filteredStudents.length > 0 ? (
+                            filteredStudents.map(
+                              (student: { id: string; name: string }) => (
+                                <option
+                                  key={student.id}
+                                  value={student.id}
+                                  onClick={() => {
+                                    field.onChange(student.id);
+                                    setSearchTerm(student.name);
+                                    setIsOpen(false);
+                                  }}
+                                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                                >
+                                  {student.name}
+                                </option>
+                              )
+                            )
+                          ) : (
+                            <div className="p-2 text-gray-500">
+                              No students found
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+              />
+              {errors.studentId && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.studentId.message}
+                </p>
               )}
-            />
-            {errors.studentId && (
-              <p className="text-xs text-red-500 mt-1">{errors.studentId.message}</p>
-            )}
+            </div>
           </div>
-        </div>
-      </fieldset>
-
-      {data?.id && (
-        <input type="hidden" {...register("id")} />
+        </fieldset>
       )}
+
+      {data?.id && <input type="hidden" {...register("id")} />}
 
       {state.error && state.errorMessage && (
         <p className="text-red-500 text-sm">{state.errorMessage}</p>
