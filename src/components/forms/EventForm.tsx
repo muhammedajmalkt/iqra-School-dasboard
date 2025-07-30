@@ -24,7 +24,15 @@ const EventForm = ({
     if (!date) return "";
     const dateObj = date instanceof Date ? date : new Date(date);
     if (isNaN(dateObj.getTime())) return "";
-    return dateObj.toISOString().slice(0, 16);
+
+    // Get the timezone offset in minutes and convert to milliseconds
+    const timezoneOffset = dateObj.getTimezoneOffset() * 60000;
+
+    // Create a new date adjusted for timezone to get local time
+    const localDate = new Date(dateObj.getTime() - timezoneOffset);
+
+    // Return in the format needed for datetime-local input
+    return localDate.toISOString().slice(0, 16);
   };
 
   const {
@@ -42,7 +50,7 @@ const EventForm = ({
       id: data?.id || undefined,
     },
   });
-  console.log("erros", errors);
+
   const [state, formAction] = useActionState(
     type === "create" ? createEvent : updateEvent,
     { success: false, error: false, errorMessage: "" }

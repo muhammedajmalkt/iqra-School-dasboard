@@ -93,7 +93,7 @@ const SubjectForm = ({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Teachers</legend>
+        <legend className="text-sm font-medium text-gray-400">Teachers (Optional)</legend>
         <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded scrollbar-hide">
           {teachers.map((teacher: { id: string; name: string; surname: string }) => (
             <label key={teacher.id} className="flex items-center gap-2">

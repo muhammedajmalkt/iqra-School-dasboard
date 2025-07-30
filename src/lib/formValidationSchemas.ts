@@ -13,7 +13,9 @@ export const classSchema = z.object({
   name: z.string().min(1, { message: "Subject name is required!" }),
   capacity: z.coerce.number().min(1, { message: "Capacity name is required!" }),
   gradeId: z.coerce.number().min(1, { message: "Grade name is required!" }),
-  supervisorId: z.coerce.string().optional(),
+  supervisorId: z.coerce
+    .string()
+    .min(1, { message: "Supervisor is required!" }),
 });
 
 export type ClassSchema = z.infer<typeof classSchema>;
@@ -74,7 +76,7 @@ export const studentSchema = z.object({
   address: z.string(),
   img: z.string().optional(),
   bloodType: z.string().min(1, { message: "Blood Type is required!" }),
-  birthday: z.coerce.date({ message: "Birthday is required!" }),
+  birthday: z.coerce.string({ message: "Birthday is required!" }),
   sex: z.enum(["MALE", "FEMALE"], { message: "Sex is required!" }),
   gradeId: z.coerce.number().min(1, { message: "Grade is required!" }),
   classId: z.coerce.number().min(1, { message: "Class is required!" }),
@@ -358,7 +360,7 @@ export const behaviorSchema = z.object({
   description: z.string().min(1, { message: "Description is required!" }),
   point: z.coerce
     .number()
-    .nonnegative({message:"Number must be greater than or equal to 1"})
+    .nonnegative({ message: "Number must be greater than or equal to 1" })
     .min(1, { message: "Point is required!" }),
   isNegative: z.boolean(),
 });

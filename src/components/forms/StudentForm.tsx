@@ -31,7 +31,6 @@ const StudentForm = ({
     resolver: zodResolver(studentSchema),
   });
 
-
   const [img, setImg] = useState<any>();
   const [state, formAction] = useActionState(
     type === "create" ? createStudent : updateStudent,
@@ -48,7 +47,9 @@ const StudentForm = ({
 
   useEffect(() => {
     if (state.success) {
-      toast(`Student ${type === "create" ? "created" : "updated"} successfully!`);
+      toast(
+        `Student ${type === "create" ? "created" : "updated"} successfully!`
+      );
       setOpen(false);
       router.refresh();
     }
@@ -59,13 +60,18 @@ const StudentForm = ({
   const selectedClassId = watch("classId") || data?.classId; // 👈 fallback to existing
 
   return (
-    <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-3xl mx-auto p-4 space-y-6 h-[70vh] overflow-scroll scrollbar-hide"
+    >
       <h2 className="text-xl font-semibold">
         {type === "create" ? "Create Student" : "Update Student"}
       </h2>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Authentication</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Authentication
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Username</label>
@@ -74,7 +80,11 @@ const StudentForm = ({
               defaultValue={data?.username}
               className="w-full p-2 border rounded"
             />
-            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>}
+            {errors.username && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.username.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
@@ -84,7 +94,11 @@ const StudentForm = ({
               defaultValue={data?.email}
               className="w-full p-2 border rounded"
             />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.email.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
@@ -94,13 +108,19 @@ const StudentForm = ({
               defaultValue={data?.password}
               className="w-full p-2 border rounded"
             />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.password.message}
+              </p>
+            )}
           </div>
         </div>
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Personal Information</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          Personal Information
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">First Name</label>
@@ -109,7 +129,9 @@ const StudentForm = ({
               defaultValue={data?.name}
               className="w-full p-2 border rounded"
             />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Last Name</label>
@@ -118,7 +140,11 @@ const StudentForm = ({
               defaultValue={data?.surname}
               className="w-full p-2 border rounded"
             />
-            {errors.surname && <p className="text-red-500 text-xs mt-1">{errors.surname.message}</p>}
+            {errors.surname && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.surname.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
@@ -127,7 +153,11 @@ const StudentForm = ({
               defaultValue={data?.phone}
               className="w-full p-2 border rounded"
             />
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+            {errors.phone && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.phone.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Address</label>
@@ -136,7 +166,11 @@ const StudentForm = ({
               defaultValue={data?.address}
               className="w-full p-2 border rounded"
             />
-            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
+            {errors.address && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.address.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Blood Type</label>
@@ -155,7 +189,11 @@ const StudentForm = ({
               <option value="O+">O+</option>
               <option value="O-">O-</option>
             </select>
-            {errors.bloodType && <p className="text-red-500 text-xs mt-1">{errors.bloodType.message}</p>}
+            {errors.bloodType && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.bloodType.message}
+              </p>
+            )}
           </div>
 
           <div>
@@ -166,7 +204,11 @@ const StudentForm = ({
               defaultValue={data?.birthday?.toISOString().split("T")[0]}
               className="w-full p-2 border rounded"
             />
-            {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday.message}</p>}
+            {errors.birthday && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.birthday.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Sex</label>
@@ -178,13 +220,17 @@ const StudentForm = ({
               <option value="MALE">Male</option>
               <option value="FEMALE">Female</option>
             </select>
-            {errors.sex && <p className="text-red-500 text-xs mt-1">{errors.sex.message}</p>}
+            {errors.sex && (
+              <p className="text-red-500 text-xs mt-1">{errors.sex.message}</p>
+            )}
           </div>
         </div>
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">School Information</legend>
+        <legend className="text-sm font-medium text-gray-400">
+          School Information
+        </legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Parent</label>
@@ -200,7 +246,11 @@ const StudentForm = ({
                 </option>
               ))}
             </select>
-            {errors.parentId && <p className="text-red-500 text-xs mt-1">{errors.parentId.message}</p>}
+            {errors.parentId && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.parentId.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Grade</label>
@@ -215,7 +265,11 @@ const StudentForm = ({
                 </option>
               ))}
             </select>
-            {errors.gradeId && <p className="text-red-500 text-xs mt-1">{errors.gradeId.message}</p>}
+            {errors.gradeId && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.gradeId.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Class</label>
@@ -226,13 +280,17 @@ const StudentForm = ({
             >
               {classes.map((classItem: any) => (
                 <option key={classItem.id} value={classItem.id}>
-                  {classItem.name} ({classItem._count?.students || 0}/{classItem.capacity})
+                  {classItem.name} ({classItem._count?.students || 0}/
+                  {classItem.capacity})
                 </option>
               ))}
             </select>
-            {errors.classId && <p className="text-red-500 text-xs mt-1">{errors.classId.message}</p>}
+            {errors.classId && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.classId.message}
+              </p>
+            )}
           </div>
-
 
           <div>
             <label className="block text-sm font-medium mb-1">Roll No</label>
@@ -243,30 +301,34 @@ const StudentForm = ({
             >
               <option value="">Select Roll No</option>
               {(() => {
-                const selectedClass = classes.find(c => c.id === Number(selectedClassId));
+                const selectedClass = classes.find(
+                  (c: any) => c.id === Number(selectedClassId)
+                );
                 if (!selectedClass) return null;
 
                 const capacity = selectedClass.capacity;
                 const used = usedRollNos[selectedClass.id] || [];
 
-                return Array.from({ length: capacity }, (_, i) => i + 1).map((roll) => {
-                  const isDisabled = used.includes(roll) && roll !== data?.rollNo;
+                return Array.from({ length: capacity }, (_, i) => i + 1).map(
+                  (roll) => {
+                    const isDisabled =
+                      used.includes(roll) && roll !== data?.rollNo;
 
-                  return (
-                    <option key={roll} value={roll} disabled={isDisabled}>
-                      {roll}
-                    </option>
-                  );
-                });
+                    return (
+                      <option key={roll} value={roll} disabled={isDisabled}>
+                        {roll}
+                      </option>
+                    );
+                  }
+                );
               })()}
             </select>
             {errors.rollNo && (
-              <p className="text-red-500 text-xs mt-1">{errors.rollNo.message}</p>
+              <p className="text-red-500 text-xs mt-1">
+                {errors.rollNo.message}
+              </p>
             )}
           </div>
-
-
-
         </div>
       </fieldset>
 
@@ -324,8 +386,12 @@ const StudentForm = ({
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
         >
           {isPending
-            ? type === "create" ? "Creating..." : "Updating..."
-            : type === "create" ? "Create" : "Update"}
+            ? type === "create"
+              ? "Creating..."
+              : "Updating..."
+            : type === "create"
+            ? "Create"
+            : "Update"}
         </button>
       </div>
     </form>
@@ -333,4 +399,3 @@ const StudentForm = ({
 };
 
 export default StudentForm;
-
