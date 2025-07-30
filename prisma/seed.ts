@@ -30,7 +30,7 @@ async function createAdminUser() {
 
 async function main() {
   await createAdminUser();
-
+  await tempSeed();
   // ADMIN
   await prisma.admin.create({
     data: {
@@ -40,13 +40,13 @@ async function main() {
   });
 
   // GRADE
-  for (let i = 1; i <= 6; i++) {
-    await prisma.grade.create({
-      data: {
-        level: i,
-      },
-    });
-  }
+  // for (let i = 1; i <= 6; i++) {
+  //   await prisma.grade.create({
+  //     data: {
+  //       level: i,
+  //     },
+  //   });
+  // }
 
   // FEE TYPES
   const feeTypes = [
@@ -72,22 +72,12 @@ async function main() {
     },
   ];
 
-  for (const feeType of feeTypes) {
-    await prisma.feeType.create({ data: feeType });
-  }
+  // for (const feeType of feeTypes) {
+  //   await prisma.feeType.create({ data: feeType });
+  // }
 }
 
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error("seed has error:", e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
-
-export async function tempSeed() {
+async function tempSeed() {
   // Clear existing data (be careful with this in production!)
   await prisma.$transaction([
     prisma.incident.deleteMany(),
@@ -109,9 +99,6 @@ export async function tempSeed() {
     prisma.class.deleteMany(),
     prisma.grade.deleteMany(),
   ]);
-
-  // Delete Clerk users (optional - be very careful with this)
-  // You might want to skip this part if you don't want to delete real users
 
   // Create Grades
   const grades = await prisma.$transaction([
@@ -210,7 +197,7 @@ export async function tempSeed() {
     }),
   ]);
 
-  // Create Parents
+  // Create Parents (each will have 1-2 children)
   const parent1 = await clerk.users.createUser({
     username: "parent1",
     password: "Password123!",
@@ -235,6 +222,15 @@ export async function tempSeed() {
     firstName: "Thomas",
     lastName: "Miller",
     emailAddress: ["thomas.miller@example.com"],
+    publicMetadata: { role: "parent" },
+  });
+
+  const parent4 = await clerk.users.createUser({
+    username: "parent4",
+    password: "Password123!",
+    firstName: "Lisa",
+    lastName: "Wilson",
+    emailAddress: ["lisa.wilson@example.com"],
     publicMetadata: { role: "parent" },
   });
 
@@ -272,15 +268,26 @@ export async function tempSeed() {
         address: "303 Caregiver St, Family Town",
       },
     }),
+    prisma.parent.create({
+      data: {
+        id: parent4.id,
+        username: "parent4",
+        name: "Lisa",
+        surname: "Wilson",
+        email: "lisa.wilson@example.com",
+        phone: "555-0204",
+        address: "404 Family Rd, Family Town",
+      },
+    }),
   ]);
 
-  // Create Classes
+  // Create Classes (each supervised by one teacher)
   const classes = await prisma.$transaction([
     prisma.class.create({
       data: {
         name: "9-A",
         capacity: 30,
-        supervisorId: teacher1.id,
+        supervisorId: teacher1.id, // Teacher 1 supervises this class
         gradeId: grades[0].id, // Grade 9
       },
     }),
@@ -288,13 +295,21 @@ export async function tempSeed() {
       data: {
         name: "10-B",
         capacity: 25,
-        supervisorId: teacher2.id,
+        supervisorId: teacher2.id, // Teacher 2 supervises this class
         gradeId: grades[1].id, // Grade 10
+      },
+    }),
+    prisma.class.create({
+      data: {
+        name: "11-C",
+        capacity: 20,
+        supervisorId: teacher3.id, // Teacher 3 supervises this class
+        gradeId: grades[2].id, // Grade 11
       },
     }),
   ]);
 
-  // Create Students
+  // Create Students (ensuring each teacher has 2+ students and parents have 1-2 children)
   const student1 = await clerk.users.createUser({
     username: "student1",
     password: "Password123!",
@@ -322,7 +337,35 @@ export async function tempSeed() {
     publicMetadata: { role: "student" },
   });
 
+  const student4 = await clerk.users.createUser({
+    username: "student4",
+    password: "Password123!",
+    firstName: "Daniel",
+    lastName: "Wilson",
+    emailAddress: ["daniel.wilson@school.edu"],
+    publicMetadata: { role: "student" },
+  });
+
+  const student5 = await clerk.users.createUser({
+    username: "student5",
+    password: "Password123!",
+    firstName: "Olivia",
+    lastName: "Williams",
+    emailAddress: ["olivia.williams@school.edu"],
+    publicMetadata: { role: "student" },
+  });
+
+  const student6 = await clerk.users.createUser({
+    username: "student6",
+    password: "Password123!",
+    firstName: "Ethan",
+    lastName: "Johnson",
+    emailAddress: ["ethan.johnson@school.edu"],
+    publicMetadata: { role: "student" },
+  });
+
   await prisma.$transaction([
+    // Teacher 1's students (3 students)
     prisma.student.create({
       data: {
         id: student1.id,
@@ -336,10 +379,29 @@ export async function tempSeed() {
         bloodType: "A+",
         sex: "FEMALE",
         birthday: new Date("2008-03-10"),
-        classId: classes[0].id,
+        classId: classes[0].id, // Class supervised by Teacher 1
         gradeId: grades[0].id,
-        parentId: parent1.id,
+        parentId: parent1.id, // Parent 1 has 2 children
         rollNo: 1,
+      },
+    }),
+    prisma.student.create({
+      data: {
+        id: student5.id,
+        username: "student5",
+        name: "Olivia",
+        surname: "Williams",
+        email: "olivia.williams@school.edu",
+        phone: "555-0305",
+        address: "505 Student Ave, Education City",
+        img: "https://example.com/student5.jpg",
+        bloodType: "A-",
+        sex: "FEMALE",
+        birthday: new Date("2008-07-15"),
+        classId: classes[0].id, // Class supervised by Teacher 1
+        gradeId: grades[0].id,
+        parentId: parent1.id, // Parent 1 has 2 children
+        rollNo: 2,
       },
     }),
     prisma.student.create({
@@ -355,12 +417,14 @@ export async function tempSeed() {
         bloodType: "B+",
         sex: "MALE",
         birthday: new Date("2007-07-15"),
-        classId: classes[0].id,
+        classId: classes[0].id, // Class supervised by Teacher 1
         gradeId: grades[0].id,
-        parentId: parent2.id,
-        rollNo: 2,
+        parentId: parent2.id, // Parent 2 has 1 child
+        rollNo: 3,
       },
     }),
+    
+    // Teacher 2's students (2 students)
     prisma.student.create({
       data: {
         id: student3.id,
@@ -374,9 +438,49 @@ export async function tempSeed() {
         bloodType: "O+",
         sex: "FEMALE",
         birthday: new Date("2006-11-20"),
-        classId: classes[1].id,
+        classId: classes[1].id, // Class supervised by Teacher 2
         gradeId: grades[1].id,
-        parentId: parent3.id,
+        parentId: parent3.id, // Parent 3 has 1 child
+        rollNo: 1,
+      },
+    }),
+    prisma.student.create({
+      data: {
+        id: student6.id,
+        username: "student6",
+        name: "Ethan",
+        surname: "Johnson",
+        email: "ethan.johnson@school.edu",
+        phone: "555-0306",
+        address: "606 Learner Blvd, Education City",
+        img: "https://example.com/student6.jpg",
+        bloodType: "AB+",
+        sex: "MALE",
+        birthday: new Date("2006-05-22"),
+        classId: classes[1].id, // Class supervised by Teacher 2
+        gradeId: grades[1].id,
+        parentId: parent4.id, // Parent 4 has 1 child
+        rollNo: 2,
+      },
+    }),
+    
+    // Teacher 3's students (1 student)
+    prisma.student.create({
+      data: {
+        id: student4.id,
+        username: "student4",
+        name: "Daniel",
+        surname: "Wilson",
+        email: "daniel.wilson@school.edu",
+        phone: "555-0304",
+        address: "404 Scholar Rd, Education City",
+        img: "https://example.com/student4.jpg",
+        bloodType: "B-",
+        sex: "MALE",
+        birthday: new Date("2005-09-05"),
+        classId: classes[2].id, // Class supervised by Teacher 3
+        gradeId: grades[2].id,
+        parentId: parent4.id, // Parent 4 has 2 children
         rollNo: 1,
       },
     }),
@@ -448,34 +552,87 @@ export async function tempSeed() {
         paymentMethod: "bank_transfer",
       },
     }),
+    prisma.fee.create({
+      data: {
+        studentId: student4.id,
+        feeTypeId: feeTypes[2].id,
+        amount: 75,
+        dueDate: new Date("2023-12-31"),
+        academicYear: "2023-2024",
+        semester: "1",
+        status: "pending",
+      },
+    }),
+    prisma.fee.create({
+      data: {
+        studentId: student5.id,
+        feeTypeId: feeTypes[0].id,
+        amount: 1000,
+        dueDate: new Date("2023-12-31"),
+        academicYear: "2023-2024",
+        semester: "1",
+        status: "paid",
+        paidAmount: 1000,
+        paidDate: new Date("2023-09-10"),
+        paymentMethod: "credit_card",
+      },
+    }),
+    prisma.fee.create({
+      data: {
+        studentId: student6.id,
+        feeTypeId: feeTypes[1].id,
+        amount: 50,
+        dueDate: new Date("2023-12-31"),
+        academicYear: "2023-2024",
+        semester: "1",
+        status: "paid",
+        paidAmount: 50,
+        paidDate: new Date("2023-09-05"),
+        paymentMethod: "cash",
+      },
+    }),
   ]);
 
-  // Create Lessons
+  // Create Lessons (each teacher teaches their own class)
   const lessons = await prisma.$transaction([
+    // Teacher 1's lessons (Math and Science for Class 9-A)
     prisma.lesson.create({
       data: {
         name: "Math Class",
         day: "MONDAY",
-        subjectId: subjects[0].id,
-        classId: classes[0].id,
+        subjectId: subjects[0].id, // Math
+        classId: classes[0].id, // Class 9-A
         teacherId: teacher1.id,
       },
     }),
     prisma.lesson.create({
       data: {
+        name: "Science Class",
+        day: "WEDNESDAY",
+        subjectId: subjects[1].id, // Science
+        classId: classes[0].id, // Class 9-A
+        teacherId: teacher1.id,
+      },
+    }),
+    
+    // Teacher 2's lessons (English for Class 10-B)
+    prisma.lesson.create({
+      data: {
         name: "English Class",
         day: "TUESDAY",
-        subjectId: subjects[2].id,
-        classId: classes[0].id,
+        subjectId: subjects[2].id, // English
+        classId: classes[1].id, // Class 10-B
         teacherId: teacher2.id,
       },
     }),
+    
+    // Teacher 3's lessons (History for Class 11-C)
     prisma.lesson.create({
       data: {
         name: "History Class",
-        day: "WEDNESDAY",
-        subjectId: subjects[3].id,
-        classId: classes[1].id,
+        day: "THURSDAY",
+        subjectId: subjects[3].id, // History
+        classId: classes[2].id, // Class 11-C
         teacherId: teacher3.id,
       },
     }),
@@ -488,7 +645,7 @@ export async function tempSeed() {
         title: "Math Homework 1",
         startDate: new Date("2023-09-01"),
         dueDate: new Date("2023-09-15"),
-        lessonId: lessons[0].id,
+        lessonId: lessons[0].id, // Teacher 1's math lesson
       },
     }),
     prisma.assignment.create({
@@ -496,7 +653,7 @@ export async function tempSeed() {
         title: "English Essay",
         startDate: new Date("2023-09-05"),
         dueDate: new Date("2023-09-20"),
-        lessonId: lessons[1].id,
+        lessonId: lessons[2].id, // Teacher 2's english lesson
       },
     }),
   ]);
@@ -508,7 +665,7 @@ export async function tempSeed() {
         title: "Midterm Math Exam",
         startTime: new Date("2023-10-15T09:00:00"),
         endTime: new Date("2023-10-15T11:00:00"),
-        lessonId: lessons[0].id,
+        lessonId: lessons[0].id, // Teacher 1's math lesson
       },
     }),
     prisma.exam.create({
@@ -516,13 +673,14 @@ export async function tempSeed() {
         title: "English Midterm",
         startTime: new Date("2023-10-16T09:00:00"),
         endTime: new Date("2023-10-16T11:00:00"),
-        lessonId: lessons[1].id,
+        lessonId: lessons[2].id, // Teacher 2's english lesson
       },
     }),
   ]);
 
-  // Create Results
+  // Create Results (for Teacher 1's and Teacher 2's students)
   await prisma.$transaction([
+    // Results for Teacher 1's students
     prisma.result.create({
       data: {
         score: 85,
@@ -544,10 +702,34 @@ export async function tempSeed() {
         studentId: student1.id,
       },
     }),
+    prisma.result.create({
+      data: {
+        score: 88,
+        examId: exams[0].id,
+        studentId: student2.id,
+      },
+    }),
+    
+    // Results for Teacher 2's students
+    prisma.result.create({
+      data: {
+        score: 95,
+        assignmentId: assignments[1].id,
+        studentId: student3.id,
+      },
+    }),
+    prisma.result.create({
+      data: {
+        score: 90,
+        examId: exams[1].id,
+        studentId: student3.id,
+      },
+    }),
   ]);
 
   // Create Attendances
   await prisma.$transaction([
+    // Attendances for Teacher 1's students
     prisma.attendance.create({
       data: {
         date: new Date("2023-09-01"),
@@ -566,7 +748,25 @@ export async function tempSeed() {
       data: {
         date: new Date("2023-09-02"),
         present: true,
+        studentId: student1.id,
+      },
+    }),
+    
+    // Attendances for Teacher 2's students
+    prisma.attendance.create({
+      data: {
+        date: new Date("2023-09-01"),
+        present: true,
         studentId: student3.id,
+      },
+    }),
+    
+    // Attendances for Teacher 3's student
+    prisma.attendance.create({
+      data: {
+        date: new Date("2023-09-01"),
+        present: true,
+        studentId: student4.id,
       },
     }),
   ]);
@@ -591,8 +791,9 @@ export async function tempSeed() {
     }),
   ]);
 
-  // Create Incidents
+  // Create Incidents (for Teacher 1's and Teacher 2's students)
   await prisma.$transaction([
+    // Positive incident for Teacher 1's student
     prisma.incident.create({
       data: {
         date: new Date("2023-09-05"),
@@ -602,19 +803,33 @@ export async function tempSeed() {
         behaviorId: behaviors[0].id,
       },
     }),
+    
+    // Negative incident for Teacher 1's student
     prisma.incident.create({
       data: {
         date: new Date("2023-09-10"),
-        givenById: teacher2.id,
+        givenById: teacher1.id,
         comment: "Late to class 3 times this week",
         studentId: student2.id,
         behaviorId: behaviors[1].id,
+      },
+    }),
+    
+    // Positive incident for Teacher 2's student
+    prisma.incident.create({
+      data: {
+        date: new Date("2023-09-12"),
+        givenById: teacher2.id,
+        comment: "Excellent essay work",
+        studentId: student3.id,
+        behaviorId: behaviors[0].id,
       },
     }),
   ]);
 
   // Create Events
   await prisma.$transaction([
+    // Event for Teacher 1's class
     prisma.event.create({
       data: {
         title: "Parent-Teacher Meeting",
@@ -624,6 +839,8 @@ export async function tempSeed() {
         classId: classes[0].id,
       },
     }),
+    
+    // School-wide event
     prisma.event.create({
       data: {
         title: "School Picnic",
@@ -636,6 +853,7 @@ export async function tempSeed() {
 
   // Create Announcements
   const announcements = await prisma.$transaction([
+    // Announcement for Teacher 1's class
     prisma.announcement.create({
       data: {
         title: "Welcome Back to School!",
@@ -644,6 +862,8 @@ export async function tempSeed() {
         classId: classes[0].id,
       },
     }),
+    
+    // School-wide announcement
     prisma.announcement.create({
       data: {
         title: "School Closed on Monday",
@@ -656,16 +876,35 @@ export async function tempSeed() {
   // Mark some announcements as viewed
   await prisma.announcementView.createMany({
     data: [
+      // Teacher 1 views class announcement
+      {
+        userId: teacher1.id,
+        announcementId: announcements[0].id,
+      },
+      
+      // Student 1 views class announcement
       {
         userId: student1.id,
         announcementId: announcements[0].id,
       },
+      
+      // Teacher 1 views school-wide announcement
       {
         userId: teacher1.id,
-        announcementId: announcements[0].id,
+        announcementId: announcements[1].id,
       },
     ],
   });
 
   console.log("Seed data created successfully!");
 }
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error("seed has error:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
