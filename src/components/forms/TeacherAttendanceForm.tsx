@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { type Dispatch, type SetStateAction, startTransition, useActionState, useEffect } from "react";
+import { type Dispatch, type SetStateAction, startTransition, useActionState, useEffect, useState } from "react";
 import { createAttendances } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -28,6 +28,8 @@ const TeacherAttendanceForm = ({
     register,
     handleSubmit,
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<TeacherAttendanceSchema>({
     resolver: zodResolver(teacherAttendanceSchema),
@@ -71,7 +73,21 @@ const TeacherAttendanceForm = ({
   },
   (formErrors) => {
     console.log("VALIDATION ERRORS", formErrors); 
-    })
+  });
+
+  // Watch all attendance values
+  const attendances = watch("attendances");
+  
+  // Check if all students are selected
+  const allSelected = attendances?.every(att => att.present) || false;
+
+  // Toggle select all function
+  const toggleSelectAll = () => {
+    const newValue = !allSelected;
+    fields.forEach((_, index) => {
+      setValue(`attendances.${index}.present`, newValue);
+    });
+  };
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl mx-auto p-4 space-y-6">
@@ -96,8 +112,17 @@ const TeacherAttendanceForm = ({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-gray-400">Students</legend>
-        <div className="overflow-x-auto max-h-[300px] overflow-y-auto scrollbar-hide">
+        <div className="flex justify-between items-center">
+          <legend className="text-sm font-medium text-gray-400">Students</legend>
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
+        <div className="overflow-x-auto max-h-[400px] overflow-y-auto scrollbar-hide">
           <table className="min-w-full border border-gray-200">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
