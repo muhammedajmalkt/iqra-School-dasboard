@@ -93,7 +93,7 @@ const StudentListPage = async ({
   // Role-based filtering - if teacher, only show their students
   if (role === "teacher") {
     query.class = {
-      supervisorId: userId, // Use the current teacher's ID as supervisor
+      supervisorId: userId!, // Use the current teacher's ID as supervisor
     };
   }
 
@@ -117,7 +117,7 @@ const StudentListPage = async ({
             query.AND = [
               {
                 class: {
-                  supervisorId: userId,
+                  supervisorId: userId!,
                 },
               },
               {

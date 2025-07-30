@@ -856,7 +856,7 @@ export const createClass = async (
       data: {
         name: data.name,
         capacity: data.capacity,
-        supervisorId: data.supervisorId || null,
+        supervisorId: data.supervisorId,
         gradeId: data.gradeId,
       },
     });
@@ -890,7 +890,7 @@ export const updateClass = async (
       data: {
         name: data.name,
         capacity: data.capacity,
-        supervisorId: data.supervisorId || null,
+        supervisorId: data.supervisorId,
         gradeId: data.gradeId,
       },
     });
