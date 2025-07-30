@@ -4,22 +4,22 @@ import { currentUser } from "@clerk/nextjs/server";
 
 export type FormContainerProps = {
   table:
-    | "teacher"
-    | "student"
-    | "parent"
-    | "subject"
-    | "class"
-    | "lesson"
-    | "exam"
-    | "assignment"
-    | "result"
-    | "attendance"
-    | "teacherAttendance"
-    | "event"
-    | "announcement"
-    | "fee"
-    | "incident"
-    | "behavior";
+  | "teacher"
+  | "student"
+  | "parent"
+  | "subject"
+  | "class"
+  | "lesson"
+  | "exam"
+  | "assignment"
+  | "result"
+  | "attendance"
+  | "teacherAttendance"
+  | "event"
+  | "announcement"
+  | "fee"
+  | "incident"
+  | "behavior";
   type: "create" | "update" | "delete";
   data?: any;
   id?: number | string;
@@ -77,18 +77,46 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           select: { id: true, level: true },
         });
         const studentClasses = await prisma.class.findMany({
-          include: { _count: { select: { students: true } } },
+          include: {
+            _count: { select: { students: true } },
+            students: { select: { rollNo: true } }
+          },
         });
         const parents = await prisma.parent.findMany({
           select: { id: true, name: true, surname: true },
         });
+        // 👇 Build usedRollNos map
+        const usedRollNosPerClass = studentClasses.reduce((acc, classItem) => {
+          acc[classItem.id] = classItem.students.map((s) => s.rollNo);
+          return acc;
+        }, {} as Record<number, number[]>);
+
         relatedData = {
-          classes: studentClasses,
+          classes: studentClasses.map(({ students, ...rest }) => rest),
           grades: studentGrades,
           parents: parents,
+          usedRollNos: usedRollNosPerClass,
         };
         break;
       }
+
+      // case "student": {
+      //   const studentGrades = await prisma.grade.findMany({
+      //     select: { id: true, level: true },
+      //   });
+      //   const studentClasses = await prisma.class.findMany({
+      //     include: { _count: { select: { students: true } } },
+      //   });
+      //   const parents = await prisma.parent.findMany({
+      //     select: { id: true, name: true, surname: true },
+      //   });
+      //   relatedData = {
+      //     classes: studentClasses,
+      //     grades: studentGrades,
+      //     parents: parents,
+      //   };
+      //   break;
+      // }
 
       case "exam": {
         const examLessons = await prisma.lesson.findMany({
@@ -147,14 +175,14 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           where:
             role === "teacher"
               ? {
-                  class: {
-                    lessons: {
-                      some: {
-                        teacherId: currentUserId!,
-                      },
+                class: {
+                  lessons: {
+                    some: {
+                      teacherId: currentUserId!,
                     },
                   },
-                }
+                },
+              }
               : {},
           select: {
             id: true,
@@ -169,9 +197,8 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         // Format students with full name and class info
         const formattedStudents = students.map((student) => ({
           id: student.id,
-          name: `${student.name} ${student.surname}${
-            student.class ? ` (${student.class.name})` : ""
-          }`,
+          name: `${student.name} ${student.surname}${student.class ? ` (${student.class.name})` : ""
+            }`,
         }));
 
         // Fetch exams - filter by teacher if role is teacher
@@ -179,10 +206,10 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           where:
             role === "teacher"
               ? {
-                  lesson: {
-                    teacherId: currentUserId!,
-                  },
-                }
+                lesson: {
+                  teacherId: currentUserId!,
+                },
+              }
               : {},
           select: {
             id: true,
@@ -209,10 +236,10 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
           where:
             role === "teacher"
               ? {
-                  lesson: {
-                    teacherId: currentUserId!,
-                  },
-                }
+                lesson: {
+                  teacherId: currentUserId!,
+                },
+              }
               : {},
           select: {
             id: true,
@@ -255,22 +282,53 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
 
       case "attendance": {
         const students = await prisma.student.findMany({
-  where:
-    role === "teacher"
-      ? {
-          class: {
-            lessons: {
-              some: {
-                teacherId: currentUserId!,
-              },
-            },
-          },
-        }
-      : {},
+          where:
+            role === "teacher"
+              ? {
+                class: {
+                  lessons: {
+                    some: {
+                      teacherId: currentUserId!,
+                    },
+                  },
+                },
+              }
+              : {},
           select: {
             id: true,
             name: true,
             surname: true,
+            rollNo: true,
+            class: {
+              select: { name: true },
+            },
+          },
+        });
+        const formattedStudents = students.map((student) => ({
+          id: student.id,
+          name: `${student.rollNo} ${student.name} ${student.surname}${student.class ? ` (${student.class.name})` : ""
+            }`,
+        }));
+        relatedData = {
+          students: formattedStudents,
+        };
+        break;
+      }
+
+      case "teacherAttendance": {
+        const students = await prisma.student.findMany({
+          where: role === "teacher"
+            ? {
+              class: {
+                supervisorId: currentUserId,
+              },
+            }
+            : {},
+          select: {
+            id: true,
+            name: true,
+            surname: true,
+            rollNo: true,
             class: {
               select: { name: true },
             },
@@ -279,67 +337,21 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
 
         const formattedStudents = students.map((student) => ({
           id: student.id,
-          name: `${student.name} ${student.surname}${
-            student.class ? ` (${student.class.name})` : ""
-          }`,
+          name: `${student.rollNo} ${student.name} ${student.surname}`
         }));
 
-        const lessons = await prisma.lesson.findMany({
-          where: role === "teacher" ? { teacherId: currentUserId! } : {},
-          select: {
-            id: true,
-            name: true,
-            subject: {
-              select: { name: true },
-            },
-            class: {
-              select: { name: true },
-            },
-          },
-        });
-
-        const formattedLessons = lessons.map((lesson) => ({
-          id: lesson.id,
-          title: `${lesson.name} (${lesson.subject.name} - ${lesson.class.name})`,
-        }));
+        // const formattedStudents = students.map((student) => ({
+        //   id: student.id,
+        //   name: `${student.rollNo} ${student.name} ${student.surname}${
+        //     student.class ? ` (${student.class.name})` : ""
+        //   }`,
+        // }));
 
         relatedData = {
           students: formattedStudents,
-          lessons: formattedLessons,
         };
         break;
       }
-   case "teacherAttendance": {
-  const students = await prisma.student.findMany({
-    where: role === "teacher"
-      ? {
-          class: {
-            supervisorId: currentUserId, // ✅ only get students of classes supervised by the teacher
-          },
-        }
-      : {}, // for admins or others, return all students
-    select: {
-      id: true,
-      name: true,
-      surname: true,
-      class: {
-        select: { name: true },
-      },
-    },
-  });
-
-  const formattedStudents = students.map((student) => ({
-    id: student.id,
-    name: `${student.name} ${student.surname}${
-      student.class ? ` (${student.class.name})` : ""
-    }`,
-  }));
-
-  relatedData = {
-    students: formattedStudents,
-  };
-  break;
-}
 
 
       case "event": {
@@ -362,14 +374,14 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
             where:
               role === "teacher"
                 ? {
-                    class: {
-                      lessons: {
-                        some: {
-                          teacherId: currentUserId!,
-                        },
+                  class: {
+                    lessons: {
+                      some: {
+                        teacherId: currentUserId!,
                       },
                     },
-                  }
+                  },
+                }
                 : {},
             select: { id: true, name: true, surname: true },
             orderBy: { name: "asc" },
@@ -377,19 +389,19 @@ const FormContainer = async ({ table, type, data, id }: FormContainerProps) => {
         ]);
 
         relatedData = { behaviors, students, currentUserId };
-         break;
+        break;
       }
       case "fee": {
         const studentClasses = await prisma.student.findMany({
           select: { id: true, name: true },
         });
-          const feeType = await prisma.feeType.findMany({
-          select: { id: true, name: true ,defaultAmount:true },
+        const feeType = await prisma.feeType.findMany({
+          select: { id: true, name: true, defaultAmount: true },
         });
 
         relatedData = {
-          students:studentClasses,
-          feeTypes:feeType
+          students: studentClasses,
+          feeTypes: feeType
         };
         break;
       }

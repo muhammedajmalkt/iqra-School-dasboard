@@ -8,6 +8,7 @@ import { Attendance, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
+import { classesData } from "@/lib/data";
 
 type AttendanceList = Attendance & {
   student: Student;
@@ -121,14 +122,15 @@ const AttendanceListPage = async ({
 
   const columns = [
     { header: "Student", accessor: "student" },
+    ...(role === "admin" ? [{ header: "Class", accessor: "class", className: "hidden lg:table-cell text-center" }] : []),
     { header: "Date", accessor: "date", className: "hidden lg:table-cell" },
     { header: "Status", accessor: "present" },
     ...(role === "admin" || role === "teacher"
       ? [{ header: "Actions", accessor: "action" }]
       : []),
   ];
-
   const renderRow = (item: AttendanceList) => (
+
     <tr
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
@@ -136,9 +138,11 @@ const AttendanceListPage = async ({
       <td className="flex items-center gap-4 p-4">
         <div className="flex flex-col">
           <h3 className="font-semibold">{item.student.name}</h3>
-          <p className="text-xs text-gray-500">{item.student.email}</p>
+          <p className="text-xs text-gray-500 hidden lg:table-cell">{item.student.email}</p>
         </div>
       </td>
+      {role == "admin" && <td className="hidden lg:table-cell text-center">{item.student.classId}</td>
+      }
       <td className="hidden lg:table-cell">
         {new Date(item.date).toLocaleDateString("en-US", {
           year: "numeric",
@@ -148,11 +152,10 @@ const AttendanceListPage = async ({
       </td>
       <td>
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            item.present
+          className={`px-2 py-1 rounded-full text-xs font-medium ${item.present
               ? "bg-green-100 text-green-800"
               : "bg-red-100 text-red-800"
-          }`}
+            }`}
         >
           {item.present ? "Present" : "Absent"}
         </span>
@@ -218,35 +221,35 @@ const AttendanceListPage = async ({
             {isToday
               ? "Today's Attendance"
               : isYesterday
-              ? "Yesterday's Attendance"
-              : showAllRecords
-              ? "All Attendance Records"
-              : "Attendance Records"}
+                ? "Yesterday's Attendance"
+                : showAllRecords
+                  ? "All Attendance Records"
+                  : "Attendance Records"}
           </h1>
           <p className="text-sm text-gray-500">
             {isToday
               ? `Track today's attendance - ${new Date().toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  }
-                )}`
-              : isYesterday
-              ? `Yesterday's attendance records`
-              : isSpecificDate
-              ? `Attendance for ${new Date(
-                  queryParams.date!
-                ).toLocaleDateString("en-US", {
+                "en-US",
+                {
                   weekday: "long",
                   month: "long",
                   day: "numeric",
-                  year: "numeric",
-                })}`
-              : showAllRecords
-              ? "All attendance records from all dates"
-              : "Filtered attendance records"}
+                }
+              )}`
+              : isYesterday
+                ? `Yesterday's attendance records`
+                : isSpecificDate
+                  ? `Attendance for ${new Date(
+                    queryParams.date!
+                  ).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}`
+                  : showAllRecords
+                    ? "All attendance records from all dates"
+                    : "Filtered attendance records"}
           </p>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -265,11 +268,10 @@ const AttendanceListPage = async ({
                         ...queryParams,
                         sort: option.value,
                       })}`}
-                      className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
-                        currentSort === option.value
+                      className={`block px-4 py-2 text-sm hover:bg-gray-100 ${currentSort === option.value
                           ? "bg-blue-50 text-blue-600"
                           : ""
-                      }`}
+                        }`}
                     >
                       {option.label}
                     </Link>
@@ -296,11 +298,10 @@ const AttendanceListPage = async ({
                           present: queryParams.present,
                           date: new Date().toISOString().split("T")[0],
                         })}`}
-                        className={`px-3 py-2 text-xs rounded font-medium ${
-                          isToday
+                        className={`px-3 py-2 text-xs rounded font-medium ${isToday
                             ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
-                        }`}
+                          }`}
                       >
                         📅 Today&apos;s Attendance
                       </Link>
@@ -313,11 +314,10 @@ const AttendanceListPage = async ({
                             .toISOString()
                             .split("T")[0],
                         })}`}
-                        className={`px-3 py-2 text-xs rounded font-medium ${
-                          isYesterday
+                        className={`px-3 py-2 text-xs rounded font-medium ${isYesterday
                             ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-blue-50 text-gray-700"
-                        }`}
+                          }`}
                       >
                         📅 Yesterday&apos;s Attendance
                       </Link>
@@ -328,11 +328,10 @@ const AttendanceListPage = async ({
                           present: queryParams.present,
                           showAll: "true",
                         })}`}
-                        className={`px-3 py-2 text-xs rounded font-medium ${
-                          showAllRecords
+                        className={`px-3 py-2 text-xs rounded font-medium ${showAllRecords
                             ? "bg-blue-500 text-white"
                             : "bg-gray-100 hover:bg-gray-50 text-gray-700"
-                        }`}
+                          }`}
                       >
                         📊 All Records
                       </Link>
@@ -409,11 +408,10 @@ const AttendanceListPage = async ({
                           ...queryParams,
                           present: "true",
                         })}`}
-                        className={`px-3 py-2 text-xs rounded font-medium ${
-                          queryParams.present === "true"
+                        className={`px-3 py-2 text-xs rounded font-medium ${queryParams.present === "true"
                             ? "bg-green-500 text-white"
                             : "bg-green-50 hover:bg-green-100 text-green-700"
-                        }`}
+                          }`}
                       >
                         ✅ Present Only
                       </Link>
@@ -422,11 +420,10 @@ const AttendanceListPage = async ({
                           ...queryParams,
                           present: "false",
                         })}`}
-                        className={`px-3 py-2 text-xs rounded font-medium ${
-                          queryParams.present === "false"
+                        className={`px-3 py-2 text-xs rounded font-medium ${queryParams.present === "false"
                             ? "bg-red-500 text-white"
                             : "bg-red-50 hover:bg-red-100 text-red-700"
-                        }`}
+                          }`}
                       >
                         ❌ Absent Only
                       </Link>
