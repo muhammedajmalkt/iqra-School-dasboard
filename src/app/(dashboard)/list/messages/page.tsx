@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // // IMPORTS
 // import FormContainer from "@/components/FormContainer";
 // import Pagination from "@/components/Pagination";
