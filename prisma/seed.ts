@@ -22,6 +22,16 @@ async function createAdminUser() {
       password: "SecureAdmin123!",
       publicMetadata: { role: "admin" },
     });
+
+    await prisma.admin.deleteMany()
+    // ADMIN
+    await prisma.admin.create({
+      data: {
+        id: "1",
+        username: "anfaskaloor",
+      },
+    });
+
     console.log("Admin user created:", user.id);
   } catch (error) {
     console.error("Error creating admin:", error);
@@ -30,23 +40,17 @@ async function createAdminUser() {
 
 async function main() {
   await createAdminUser();
-  await tempSeed();
-  // ADMIN
-  await prisma.admin.create({
-    data: {
-      id: "1",
-      username: "anfaskaloor",
-    },
-  });
+  // await tempSeed();
 
+  await prisma.grade.deleteMany()
   // GRADE
-  // for (let i = 1; i <= 6; i++) {
-  //   await prisma.grade.create({
-  //     data: {
-  //       level: i,
-  //     },
-  //   });
-  // }
+  for (let i = 1; i <= 6; i++) {
+    await prisma.grade.create({
+      data: {
+        level: i,
+      },
+    });
+  }
 
   // FEE TYPES
   const feeTypes = [
@@ -72,9 +76,10 @@ async function main() {
     },
   ];
 
-  // for (const feeType of feeTypes) {
-  //   await prisma.feeType.create({ data: feeType });
-  // }
+  await prisma.feeType.deleteMany()
+  for (const feeType of feeTypes) {
+    await prisma.feeType.create({ data: feeType });
+  }
 }
 
 async function tempSeed() {
@@ -118,7 +123,7 @@ async function tempSeed() {
   // Create Teachers
   const teacher1 = await clerk.users.createUser({
     username: "teacher1",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "John",
     lastName: "Smith",
     emailAddress: ["john.smith@school.edu"],
@@ -127,7 +132,7 @@ async function tempSeed() {
 
   const teacher2 = await clerk.users.createUser({
     username: "teacher2",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Sarah",
     lastName: "Johnson",
     emailAddress: ["sarah.johnson@school.edu"],
@@ -136,7 +141,7 @@ async function tempSeed() {
 
   const teacher3 = await clerk.users.createUser({
     username: "teacher3",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Michael",
     lastName: "Brown",
     emailAddress: ["michael.brown@school.edu"],
@@ -200,7 +205,7 @@ async function tempSeed() {
   // Create Parents (each will have 1-2 children)
   const parent1 = await clerk.users.createUser({
     username: "parent1",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Robert",
     lastName: "Williams",
     emailAddress: ["robert.williams@example.com"],
@@ -209,7 +214,7 @@ async function tempSeed() {
 
   const parent2 = await clerk.users.createUser({
     username: "parent2",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Jennifer",
     lastName: "Davis",
     emailAddress: ["jennifer.davis@example.com"],
@@ -218,7 +223,7 @@ async function tempSeed() {
 
   const parent3 = await clerk.users.createUser({
     username: "parent3",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Thomas",
     lastName: "Miller",
     emailAddress: ["thomas.miller@example.com"],
@@ -227,7 +232,7 @@ async function tempSeed() {
 
   const parent4 = await clerk.users.createUser({
     username: "parent4",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Lisa",
     lastName: "Wilson",
     emailAddress: ["lisa.wilson@example.com"],
@@ -312,7 +317,7 @@ async function tempSeed() {
   // Create Students (ensuring each teacher has 2+ students and parents have 1-2 children)
   const student1 = await clerk.users.createUser({
     username: "student1",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Emily",
     lastName: "Williams",
     emailAddress: ["emily.williams@school.edu"],
@@ -321,7 +326,7 @@ async function tempSeed() {
 
   const student2 = await clerk.users.createUser({
     username: "student2",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "James",
     lastName: "Davis",
     emailAddress: ["james.davis@school.edu"],
@@ -330,7 +335,7 @@ async function tempSeed() {
 
   const student3 = await clerk.users.createUser({
     username: "student3",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Sophia",
     lastName: "Miller",
     emailAddress: ["sophia.miller@school.edu"],
@@ -339,7 +344,7 @@ async function tempSeed() {
 
   const student4 = await clerk.users.createUser({
     username: "student4",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Daniel",
     lastName: "Wilson",
     emailAddress: ["daniel.wilson@school.edu"],
@@ -348,7 +353,7 @@ async function tempSeed() {
 
   const student5 = await clerk.users.createUser({
     username: "student5",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Olivia",
     lastName: "Williams",
     emailAddress: ["olivia.williams@school.edu"],
@@ -357,7 +362,7 @@ async function tempSeed() {
 
   const student6 = await clerk.users.createUser({
     username: "student6",
-    password: "Password123!",
+    password: "SecureAdmin123!",
     firstName: "Ethan",
     lastName: "Johnson",
     emailAddress: ["ethan.johnson@school.edu"],
@@ -423,7 +428,7 @@ async function tempSeed() {
         rollNo: 3,
       },
     }),
-    
+
     // Teacher 2's students (2 students)
     prisma.student.create({
       data: {
@@ -463,7 +468,7 @@ async function tempSeed() {
         rollNo: 2,
       },
     }),
-    
+
     // Teacher 3's students (1 student)
     prisma.student.create({
       data: {
@@ -614,7 +619,7 @@ async function tempSeed() {
         teacherId: teacher1.id,
       },
     }),
-    
+
     // Teacher 2's lessons (English for Class 10-B)
     prisma.lesson.create({
       data: {
@@ -625,7 +630,7 @@ async function tempSeed() {
         teacherId: teacher2.id,
       },
     }),
-    
+
     // Teacher 3's lessons (History for Class 11-C)
     prisma.lesson.create({
       data: {
@@ -709,7 +714,7 @@ async function tempSeed() {
         studentId: student2.id,
       },
     }),
-    
+
     // Results for Teacher 2's students
     prisma.result.create({
       data: {
@@ -751,7 +756,7 @@ async function tempSeed() {
         studentId: student1.id,
       },
     }),
-    
+
     // Attendances for Teacher 2's students
     prisma.attendance.create({
       data: {
@@ -760,7 +765,7 @@ async function tempSeed() {
         studentId: student3.id,
       },
     }),
-    
+
     // Attendances for Teacher 3's student
     prisma.attendance.create({
       data: {
@@ -803,7 +808,7 @@ async function tempSeed() {
         behaviorId: behaviors[0].id,
       },
     }),
-    
+
     // Negative incident for Teacher 1's student
     prisma.incident.create({
       data: {
@@ -814,7 +819,7 @@ async function tempSeed() {
         behaviorId: behaviors[1].id,
       },
     }),
-    
+
     // Positive incident for Teacher 2's student
     prisma.incident.create({
       data: {
@@ -839,7 +844,7 @@ async function tempSeed() {
         classId: classes[0].id,
       },
     }),
-    
+
     // School-wide event
     prisma.event.create({
       data: {
@@ -862,7 +867,7 @@ async function tempSeed() {
         classId: classes[0].id,
       },
     }),
-    
+
     // School-wide announcement
     prisma.announcement.create({
       data: {
@@ -881,13 +886,13 @@ async function tempSeed() {
         userId: teacher1.id,
         announcementId: announcements[0].id,
       },
-      
+
       // Student 1 views class announcement
       {
         userId: student1.id,
         announcementId: announcements[0].id,
       },
-      
+
       // Teacher 1 views school-wide announcement
       {
         userId: teacher1.id,
